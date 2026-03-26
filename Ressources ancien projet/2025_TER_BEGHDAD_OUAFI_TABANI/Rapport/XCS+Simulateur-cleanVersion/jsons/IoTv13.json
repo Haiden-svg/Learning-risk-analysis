@@ -1,0 +1,2867 @@
+{
+  "nbNodes" : 13,
+  "nbSecrets" : 5,
+  "secrets" : [ "pcMac", "iotF1", "iotF2", "phWpa", "phAuth" ],
+  "nodes" : [ {
+    "name" : "AdmDesk",
+    "softwareClass" : "Linux",
+    "text" : "Phone theft by hacker",
+    "kernelIndex" : 0,
+    "nbRoles" : 4,
+    "nbInputs" : 5,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "thief",
+      "protocol" : "theft",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : null,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : null,
+      "remoteSecrTheftCost" : null,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "Hacker",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "AdmDesk <> $N & Hacker <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "AdmDesk <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "AdmDesk <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "Hacker",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "AdmDesk <> $N & Hacker <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "AdmDesk <> $N & PhoneK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "Ap",
+    "softwareClass" : "SELinux",
+    "text" : "WiFi Access Point firmware",
+    "kernelIndex" : 1,
+    "nbRoles" : 4,
+    "nbInputs" : 13,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, true, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "server",
+      "protocol" : "wpa",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 10,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 15,
+      "sessionProtectSecretIndex" : [ false, false, false, true, false ]
+    }, {
+      "name" : "x/user",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 70,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 70,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & Ap <> $N & SwEth <> $N & LanPort <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & Ap <> $N & SwEth <> $N & PcK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & Ap <> $N & SwEth <> $N & PcK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Ap <> $N & WifiCov <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "Hacker",
+    "softwareClass" : "Linux",
+    "text" : "Hacker",
+    "kernelIndex" : 2,
+    "nbRoles" : 3,
+    "nbInputs" : 3,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 0,
+      "debug_sourceNodeName" : "AdmDesk",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Hacker <> $N & AdmDesk <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Hacker <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Hacker <> $N & WifiCov <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "IotExec",
+    "softwareClass" : "PosixCriticalapp",
+    "text" : "Iot second authentication and  information services ",
+    "kernelIndex" : 4,
+    "nbRoles" : 3,
+    "nbInputs" : 3,
+    "nodeType" : "user",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "server",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "transparent",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 20,
+      "sessionProtectSecretIndex" : [ false, false, true, false, false ]
+    }, {
+      "name" : "x/app",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/kernel",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "IotK",
+    "softwareClass" : "SELinux",
+    "text" : "Iot firmware",
+    "kernelIndex" : 4,
+    "nbRoles" : 3,
+    "nbInputs" : 11,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 70,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 70,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & LanPort <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & PcK <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & PcK <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "IotExec",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "IotProxy",
+    "softwareClass" : "PosixCriticalapp",
+    "text" : "Iot two factor authentication support and proxy services",
+    "kernelIndex" : 4,
+    "nbRoles" : 5,
+    "nbInputs" : 21,
+    "nodeType" : "user",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "server/proxy",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "transparent",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 20,
+      "sessionProtectSecretIndex" : [ false, true, false, false, false ]
+    }, {
+      "name" : "server/2fAuth",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "transparent",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 5,
+      "sessionProtectSecretIndex" : [ false, false, false, false, true ]
+    }, {
+      "name" : "client",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 20,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/app",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/kernel",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "IotExec",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "mitm",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "mitm",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "mitm",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & LanPort <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & PcK <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "mitm",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "mitm",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & LanPort <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & PcK <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(0) & IotK <> $N & SwEth <> $N & PcK <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "IotK <> $N & key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "peer",
+      "roleIndex" : 4,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "IotK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : 0,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,bFall=CutAttackSources,null"
+  }, {
+    "name" : "LanPort",
+    "softwareClass" : "Linux",
+    "text" : "Lan physical access by hacker",
+    "kernelIndex" : 6,
+    "nbRoles" : 3,
+    "nbInputs" : 11,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "Hacker",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & Hacker <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "( key(0) & LanPort <> $N & SwEth <> $N | LanPort <> $N ) & PcK <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "( key(0) & LanPort <> $N & SwEth <> $N | LanPort <> $N ) & PcK <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "LanPort <> $N & key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "PcBrowser",
+    "softwareClass" : "Posixapp",
+    "text" : "Iot User Browser",
+    "kernelIndex" : 8,
+    "nbRoles" : 3,
+    "nbInputs" : 11,
+    "nodeType" : "user",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, true, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "client",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 20,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/app",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/kernel",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "( key(0) & PcK <> $N & SwEth <> $N | PcK <> $N ) & LanPort <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "PcK",
+    "softwareClass" : "Linux",
+    "text" : "Desktop kernel",
+    "kernelIndex" : 8,
+    "nbRoles" : 4,
+    "nbInputs" : 19,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ true, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "client/port",
+      "protocol" : "nac802",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 10,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 5,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 30,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "( key(0) & PcK <> $N & SwEth <> $N | PcK <> $N ) & LanPort <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "( key(0) & PcK <> $N & SwEth <> $N | PcK <> $N ) & LanPort <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N & key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "peer",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PcK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "PhAuth",
+    "softwareClass" : "PosixCriticalapp",
+    "text" : "Phone Two Factor Authentication app",
+    "kernelIndex" : 10,
+    "nbRoles" : 4,
+    "nbInputs" : 21,
+    "nodeType" : "user",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, true, false, true ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "client",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "object",
+      "protocol" : "theft",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : null,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : null,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/app",
+      "protocol" : "x/Android",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/kernel",
+      "protocol" : "x/Android",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 20,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "PhoneK <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 0,
+      "debug_sourceNodeName" : "AdmDesk",
+      "position" : "peer",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & AdmDesk <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "mitm",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : null,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "PhoneK <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "PhoneK",
+    "softwareClass" : "Android",
+    "text" : "Phone kernel",
+    "kernelIndex" : 10,
+    "nbRoles" : 4,
+    "nbInputs" : 14,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, true, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "client/ap",
+      "protocol" : "wpa",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 10,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 15,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/user",
+      "protocol" : "x/Android",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Android",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Android",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 0,
+      "debug_sourceNodeName" : "AdmDesk",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & AdmDesk <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & key(0) & Ap <> $N & SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 11,
+      "debug_sourceNodeName" : "SwEth",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & Ap <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N & WifiCov <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 1,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "PhoneK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "SwEth",
+    "softwareClass" : "SELinux",
+    "text" : "Managed Ethernet Switch Firmware",
+    "kernelIndex" : 11,
+    "nbRoles" : 4,
+    "nbInputs" : 20,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ true, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "server/port",
+      "protocol" : "nac802",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 10,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 20,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/user",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 70,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/SELinux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 60,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 70,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : [ "openvpn" ],
+        "tunnelDecrypt" : 25,
+        "tunnelDestroy" : 15
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "IotK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "IotProxy",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & IotK <> $N"
+    }, {
+      "sourceNodeIndex" : 6,
+      "debug_sourceNodeName" : "LanPort",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & LanPort <> $N"
+    }, {
+      "sourceNodeIndex" : 7,
+      "debug_sourceNodeName" : "PcBrowser",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 8,
+      "debug_sourceNodeName" : "PcK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "SwEth <> $N & PcK <> $N"
+    }, {
+      "sourceNodeIndex" : 9,
+      "debug_sourceNodeName" : "PhAuth",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & PhoneK <> $N & SwEth <> $N"
+    }, {
+      "sourceNodeIndex" : 12,
+      "debug_sourceNodeName" : "WifiCov",
+      "position" : "peer",
+      "roleIndex" : 3,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "key(3) & SwEth <> $N & Ap <> $N & WifiCov <> $N & SwEth <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "WifiCov",
+    "softwareClass" : "Linux",
+    "text" : "WiFi physical access by hacker",
+    "kernelIndex" : 12,
+    "nbRoles" : 3,
+    "nbInputs" : 3,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ false, false, false, false, false ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ false, false, false, false, false ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Ap",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "WifiCov <> $N & Ap <> $N"
+    }, {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "Hacker",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "WifiCov <> $N & Hacker <> $N"
+    }, {
+      "sourceNodeIndex" : 10,
+      "debug_sourceNodeName" : "PhoneK",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "WifiCov <> $N & PhoneK <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  } ],
+  "fallbackActions" : [ {
+    "name" : "CutAttackSources",
+    "value" : "status[1]=N;status[6]=N;status[5]=F;"
+  } ]
+}

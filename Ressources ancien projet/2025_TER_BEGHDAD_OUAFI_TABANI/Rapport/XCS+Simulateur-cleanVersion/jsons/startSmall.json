@@ -1,0 +1,24 @@
+{
+    "init":{
+        "states": [
+            {
+                "softComp": "ExtHack",
+                "location": "MALW"
+            }
+         ],
+        "secrets": [
+            {
+                "secr":"IntraCustomerSecret",
+                "val":false
+            }
+        ]
+    },
+    "final":{
+        "states": [
+            {
+                "softComp": "IoTSrv1",
+                "location": "BADD"
+            }
+         ]
+    }
+ }

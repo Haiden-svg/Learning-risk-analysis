@@ -1,0 +1,680 @@
+{
+  "nbNodes" : 6,
+  "nbSecrets" : 0,
+  "secrets" : [ ],
+  "nodes" : [ {
+    "name" : "Browser",
+    "softwareClass" : "RichBrowser",
+    "text" : "Intranet Browser",
+    "kernelIndex" : 5,
+    "nbRoles" : 3,
+    "nbInputs" : 5,
+    "nodeType" : "user",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "client",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "mandatory",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 20,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/app",
+      "protocol" : "x/WindowsDesktop",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/kernel",
+      "protocol" : "x/WindowsDesktop",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "HttpSrv",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N & Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "Linux",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N & Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "Routing",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N & Routing <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "Windows",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "Windows",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "Hacker",
+    "softwareClass" : "Linux",
+    "text" : "Hacker Kernel",
+    "kernelIndex" : 1,
+    "nbRoles" : 3,
+    "nbInputs" : 3,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "HttpSrv",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Hacker <> $N & Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "Linux",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Hacker <> $N & Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "Routing",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Hacker <> $N & Routing <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "HttpSrv",
+    "softwareClass" : "WebApp",
+    "text" : "Server Htttp",
+    "kernelIndex" : 3,
+    "nbRoles" : 3,
+    "nbInputs" : 6,
+    "nodeType" : "user",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "server",
+      "protocol" : "https",
+      "type" : "functional",
+      "categ" : "transparent",
+      "dataBreakCost" : 5,
+      "mCodeInjectCost" : 25,
+      "bCodeInjectCost" : 20,
+      "nCodeInjectCost" : 15,
+      "remoteSecrTheftCost" : 20,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/app",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/kernel",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 10,
+      "bCodeInjectCost" : 10,
+      "nCodeInjectCost" : 1,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 0,
+      "debug_sourceNodeName" : "Browser",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N & Routing <> $N & Windows <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Hacker",
+      "position" : "side",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 15,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N & Routing <> $N & Hacker <> $N"
+    }, {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "Linux",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "Routing",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N & Routing <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "Windows",
+      "position" : "mitm",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : 0,
+        "theft" : 25,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N & Routing <> $N & Windows <> $N"
+    }, {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "Linux",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "Linux",
+    "softwareClass" : "Linux",
+    "text" : "Kernel",
+    "kernelIndex" : 3,
+    "nbRoles" : 3,
+    "nbInputs" : 2,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "Routing",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N & Routing <> $N"
+    }, {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "HttpSrv",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Linux <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "Routing",
+    "softwareClass" : "Linux",
+    "text" : "router kernel",
+    "kernelIndex" : 4,
+    "nbRoles" : 3,
+    "nbInputs" : 5,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/Linux",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 50,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 50,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 0,
+      "debug_sourceNodeName" : "Browser",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Routing <> $N & Windows <> $N"
+    }, {
+      "sourceNodeIndex" : 1,
+      "debug_sourceNodeName" : "Hacker",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Routing <> $N & Hacker <> $N"
+    }, {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "HttpSrv",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "Linux",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 5,
+      "debug_sourceNodeName" : "Windows",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Routing <> $N & Windows <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  }, {
+    "name" : "Windows",
+    "softwareClass" : "WindowsDesktop",
+    "text" : "Windows OS",
+    "kernelIndex" : 5,
+    "nbRoles" : 3,
+    "nbInputs" : 4,
+    "nodeType" : "kernel",
+    "plausThreshold" : 1,
+    "actThreshold" : 0,
+    "secrTheftCost" : 10,
+    "secrStore" : [ ],
+    "monBypassCost" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "roles" : [ {
+      "name" : "x/user",
+      "protocol" : "x/WindowsDesktop",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 40,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 40,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/root",
+      "protocol" : "x/WindowsDesktop",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 20,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 10,
+      "remoteSecrTheftCost" : 10,
+      "sessionProtectSecretIndex" : [ ]
+    }, {
+      "name" : "x/network",
+      "protocol" : "x/WindowsDesktop",
+      "type" : "system",
+      "categ" : "mandatory",
+      "dataBreakCost" : null,
+      "mCodeInjectCost" : 40,
+      "bCodeInjectCost" : null,
+      "nCodeInjectCost" : 40,
+      "remoteSecrTheftCost" : 50,
+      "sessionProtectSecretIndex" : [ ]
+    } ],
+    "inputs" : [ {
+      "sourceNodeIndex" : 2,
+      "debug_sourceNodeName" : "HttpSrv",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N & Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 3,
+      "debug_sourceNodeName" : "Linux",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N & Routing <> $N & Linux <> $N"
+    }, {
+      "sourceNodeIndex" : 4,
+      "debug_sourceNodeName" : "Routing",
+      "position" : "peer",
+      "roleIndex" : 2,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N & Routing <> $N"
+    }, {
+      "sourceNodeIndex" : 0,
+      "debug_sourceNodeName" : "Browser",
+      "position" : "peer",
+      "roleIndex" : 0,
+      "protBreakCosts" : {
+        "destruct" : null,
+        "theft" : 0,
+        "tunnelProtocol" : null,
+        "tunnelDecrypt" : null,
+        "tunnelDestroy" : null
+      },
+      "isOpen" : "Windows <> $N"
+    } ],
+    "fallbackActionIndex" : {
+      "toM" : null,
+      "toB" : null,
+      "toN" : null
+    },
+    "debug_fallbackActionNames" : "null,null,null"
+  } ],
+  "fallbackActions" : [ ]
+}

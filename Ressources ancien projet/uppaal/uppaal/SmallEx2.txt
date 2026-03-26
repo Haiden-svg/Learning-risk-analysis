@@ -1,0 +1,574 @@
+/*   **************************************************************************** 
+typedef struct {
+    int[NU,nbNodes-1] node_id;      // input node id,  -1/NU not used
+    int[NU,2] attack_position;      // pF 0 == Functional, pP 1 == Path, pA 2 == Access
+    int[0,diMr] roleId;             // role id of attacked component, local id
+    int protCost[2];                // attack on protocols: session entrance cost (0 for pF), deny of service (both already adapted to the attacker position)  
+} input_t; // input description, for each interaction
+ 
+typedef struct {
+    int[0,nbNodes-1] node_id;
+    int[0, 2] node_type;            // 0 == user space component, 1 == root space component, 2 == kernel
+    int minInputBd,minInput;        // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB, mandatory roles no included
+    int[NU,MaxUnitCost] costVarGet; // steal all the secrets stored locally, by already installed local malware 
+    bool locSecretVar[nbVar];       // if true, secret to be retrieved here
+    int AnomDetParam[3];            // 3 costs for bypassing anomaly detection : m, b, n, if <0, monitoring disabled
+    int RoleParams[diMr][8];        // role params, 8 values :
+                                    // 0. role type: rA==app rS==system,
+                                    // 1. importance (!= NU only for rA) Nu=='do not consider' 0=='no mandatory' 1=='must be active',  
+                                    // 2. bad data acceptability cost
+                                    // 3. malware install costs: m
+                                    // 4. malware install costs: b
+                                    // 5. malware install costs: n,
+                                    // 6. cost of theft of locally stored secrets by remote malware, 
+                                    // 7. key number protecting the role (i.e. if the attacker already has the key, attacking the session will cost zero)
+                                    //    we consider that producing non acceptable bad data costs nothing !!!
+    input_t in[diM]; 
+} node_t; // node description, for topology
+********************************************************************************  */
+
+/*   **************************************************************************** 
+// System 
+/*   **************************************************************************** 
+{	   
+    14, 5,  //  Software nodes' number,  Variables' number
+
+    {  // int fallBackMode[nbNodes][3],   fallback number for sM, sB or sN locations
+	{NU,NU,NU} /* node: 0  : ExtBrowser   */,
+	{NU,NU,NU} /* node: 1  : KCustExt     */,
+	{NU,NU,NU} /* node: 2  : KextHack     */,
+	{1, 1, NU} /* node: 3  : FfM          */,
+	{NU,NU,NU} /* node: 4  : App          */,
+	{NU,NU,NU} /* node: 5  : IntraBrowser */,
+	{NU,NU,NU} /* node: 6  : KCustIn      */,
+	{NU,NU,NU} /* node: 7  : KIntHack     */,
+	{NU,NU,NU} /* node: 8  : Internet     */,
+	{NU,NU,NU} /* node: 9  : KfM          */,
+	{NU,NU,NU} /* node: 10 : KServ1       */,
+	{NU,NU,NU} /* node: 11 : ServHttp1    */,
+	{NU,NU,NU} /* node: 12 : KServ2       */,
+	{NU,NU,NU} /* node: 13 : ServHttp2    */
+    }
+
+    // Node KextHack
+    {
+        "KextHack", 1, 10,	// node Name, Roles' number,  Inputs' number
+        // typedef    "node_t"
+        {2, cK, 1, 0, -1, {false,false,false,false,false}, {-1,-1,-1},
+            //Roles
+            {
+                {rS,-1,-1,25,-1,18,-1,-1}
+            },
+            //Inputs
+            {
+                {0,pF,0,{-1,-1}},
+                {3,pF,0,{-1,-1}},
+                {8,pF,0,{-1,-1}},
+                {1,pF,0,{-1,-1}},
+                {6,pF,0,{-1,-1}},
+                {7,pF,0,{-1,-1}},
+                {10,pF,0,{-1,-1}},
+                {12,pF,0,{-1,-1}},
+                {9,pF,0,{-1,-1}},
+                {13,pF,0,{-1,-1}}
+            }
+        },
+        //open for inputs
+        {
+            "( state[8] != sN and  state[1] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[3] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[1] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[6] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[7] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[10] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[12] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[2] != sN)",
+            "( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[12] != sN and  state[2] != sN)"
+	} //open end
+    }, // Node end
+
+
+	{ // Node App
+		"App",3,17,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{4,cU,2,2,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rA,0,5,16,12,8,-1,-1},
+			{rA,0,5,16,12,8,-1,-1},
+			{rS,-1,5,16,12,8,-1,-1}
+		},
+		{//Inputs
+			{3,pA,0,{5,15}},
+			{6,pP,0,{5,15}},
+			{7,pA,0,{5,15}},
+			{10,pP,0,{5,15}},
+			{12,pA,0,{5,15}},
+			{9,pP,0,{5,15}},
+			{11,pF,0,{5,15}},
+			{13,pA,0,{5,15}},
+			{3,pA,1,{5,15}},
+			{6,pP,1,{5,15}},
+			{7,pA,1,{5,15}},
+			{10,pA,1,{5,15}},
+			{12,pP,1,{5,15}},
+			{9,pP,1,{5,15}},
+			{11,pA,1,{5,15}},
+			{13,pF,1,{5,15}},
+			{6,pF,2,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[3] != sN and  state[6] != sN)",
+			"( state[6] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[6] != sN)",
+			"( state[6] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[6] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node ServHttp2
+		"ServHttp2",2,14,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{13,cU,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rA,-1,5,16,12,8,-1,2},
+			{rS,-1,5,16,12,8,-1,-1}
+		},
+		{//Inputs
+			{4,pF,0,{5,15}},
+			{0,pF,0,{5,15}},
+			{3,pA,0,{5,15}},
+			{8,pA,0,{5,15}},
+			{5,pA,0,{5,15}},
+			{1,pA,0,{5,15}},
+			{6,pA,0,{5,15}},
+			{7,pA,0,{5,15}},
+			{10,pA,0,{5,15}},
+			{12,pP,0,{5,15}},
+			{2,pA,0,{5,15}},
+			{9,pP,0,{5,15}},
+			{11,pA,0,{5,15}},
+			{12,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[6] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[8] != sN and  state[1] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[8] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[8] != sN and  state[1] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[12] != sN)",
+			"( state[12] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[8] != sN and  state[2] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[12] != sN)",
+			"( state[12] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node ServHttp1
+		"ServHttp1",2,10,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{11,cU,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rA,-1,5,16,12,8,-1,-1},
+			{rS,-1,5,16,12,8,-1,-1}
+		},
+		{//Inputs
+			{4,pF,0,{5,15}},
+			{3,pA,0,{5,15}},
+			{5,pF,0,{5,15}},
+			{6,pP,0,{5,15}},
+			{7,pA,0,{5,15}},
+			{10,pP,0,{5,15}},
+			{12,pA,0,{5,15}},
+			{9,pP,0,{5,15}},
+			{13,pA,0,{5,15}},
+			{10,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[6] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[10] != sN)",
+			"( state[10] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[10] != sN)",
+			"( state[10] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node KCustExt
+		"KCustExt",2,10,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{1,cK,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1},
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{3,pF,0,{-1,-1}},
+			{8,pF,0,{-1,-1}},
+			{6,pF,0,{-1,-1}},
+			{7,pF,0,{-1,-1}},
+			{10,pF,0,{-1,-1}},
+			{12,pF,0,{-1,-1}},
+			{2,pF,0,{-1,-1}},
+			{9,pF,0,{-1,-1}},
+			{13,pF,0,{-1,-1}},
+			{0,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[8] != sN and  state[3] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[6] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[7] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[10] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[12] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[2] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[12] != sN and  state[1] != sN)",
+			"( state[1] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node FfM
+		"FfM",1,13,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{3,cK,1,0,-1,{false,false,false,false,false},{15,15,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{4,pF,0,{-1,-1}},
+			{0,pF,0,{-1,-1}},
+			{8,pF,0,{-1,-1}},
+			{5,pF,0,{-1,-1}},
+			{1,pF,0,{-1,-1}},
+			{6,pF,0,{-1,-1}},
+			{7,pF,0,{-1,-1}},
+			{10,pF,0,{-1,-1}},
+			{12,pF,0,{-1,-1}},
+			{2,pF,0,{-1,-1}},
+			{9,pF,0,{-1,-1}},
+			{11,pF,0,{-1,-1}},
+			{13,pF,0,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[6] != sN and  state[3] != sN)",
+			"( state[8] != sN and  state[1] != sN and  state[3] != sN)",
+			"( state[8] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[3] != sN)",
+			"( state[8] != sN and  state[1] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[3] != sN)",
+			"( state[8] != sN and  state[2] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[3] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[3] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node KServ1
+		"KServ1",2,9,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{10,cK,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1},
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{4,pF,0,{-1,-1}},
+			{3,pF,0,{-1,-1}},
+			{5,pF,0,{-1,-1}},
+			{6,pF,0,{-1,-1}},
+			{7,pF,0,{-1,-1}},
+			{12,pF,0,{-1,-1}},
+			{9,pF,0,{-1,-1}},
+			{13,pF,0,{-1,-1}},
+			{11,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[6] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[10] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[10] != sN)",
+			"( state[10] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node KCustIn
+		"KCustIn",2,9,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{6,cK,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1},
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{3,pF,0,{-1,-1}},
+			{7,pF,0,{-1,-1}},
+			{10,pF,0,{-1,-1}},
+			{12,pF,0,{-1,-1}},
+			{9,pF,0,{-1,-1}},
+			{11,pF,0,{-1,-1}},
+			{13,pF,0,{-1,-1}},
+			{4,pF,1,{-1,-1}},
+			{5,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[3] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[6] != sN)",
+			"( state[6] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node KServ2
+		"KServ2",2,9,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{12,cK,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1},
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{4,pF,0,{-1,-1}},
+			{3,pF,0,{-1,-1}},
+			{5,pF,0,{-1,-1}},
+			{6,pF,0,{-1,-1}},
+			{7,pF,0,{-1,-1}},
+			{10,pF,0,{-1,-1}},
+			{9,pF,0,{-1,-1}},
+			{11,pF,0,{-1,-1}},
+			{13,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[6] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[12] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[12] != sN)",
+			"( state[12] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node KfM
+		"KfM",1,9,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{9,cK,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{4,pF,0,{-1,-1}},
+			{3,pF,0,{-1,-1}},
+			{5,pF,0,{-1,-1}},
+			{6,pF,0,{-1,-1}},
+			{7,pF,0,{-1,-1}},
+			{10,pF,0,{-1,-1}},
+			{12,pF,0,{-1,-1}},
+			{11,pF,0,{-1,-1}},
+			{13,pF,0,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[6] != sN and  state[9] != sN)",
+			"( state[3] != sN and  state[9] != sN)",
+			"( state[6] != sN and  state[9] != sN)",
+			"( state[6] != sN and  state[9] != sN)",
+			"( state[7] != sN and  state[9] != sN)",
+			"( state[10] != sN and  state[9] != sN)",
+			"( state[12] != sN and  state[9] != sN)",
+			"( state[10] != sN and  state[9] != sN)",
+			"( state[12] != sN and  state[9] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node ExtBrowser
+		"ExtBrowser",2,11,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{0,cU,1,0,2,{false,false,true,false,false},{-1,-1,-1},
+		{//Roles
+			{rA,1,5,16,12,8,1,-1},
+			{rS,-1,5,16,12,8,-1,-1}
+		},
+		{//Inputs
+			{3,pP,0,{5,15}},
+			{8,pP,0,{5,15}},
+			{1,pP,0,{5,15}},
+			{6,pA,0,{5,15}},
+			{7,pA,0,{5,15}},
+			{10,pA,0,{5,15}},
+			{12,pP,0,{5,15}},
+			{2,pA,0,{5,15}},
+			{9,pP,0,{5,15}},
+			{13,pF,0,{5,15}},
+			{1,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[8] != sN and  state[3] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[1] != sN)",
+			"( state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[6] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[7] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[10] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[12] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[2] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[1] != sN)",
+			"( state[8] != sN and  state[3] != sN and  state[9] != sN and  state[12] != sN and  state[1] != sN)",
+			"( state[1] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node Internet
+		"Internet",1,10,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{8,cK,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{0,pF,0,{-1,-1}},
+			{3,pF,0,{-1,-1}},
+			{1,pF,0,{-1,-1}},
+			{6,pF,0,{-1,-1}},
+			{7,pF,0,{-1,-1}},
+			{10,pF,0,{-1,-1}},
+			{12,pF,0,{-1,-1}},
+			{2,pF,0,{-1,-1}},
+			{9,pF,0,{-1,-1}},
+			{13,pF,0,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[1] != sN and  state[8] != sN)",
+			"( state[3] != sN and  state[8] != sN)",
+			"( state[1] != sN and  state[8] != sN)",
+			"( state[3] != sN and  state[9] != sN and  state[6] != sN and  state[8] != sN)",
+			"( state[3] != sN and  state[9] != sN and  state[7] != sN and  state[8] != sN)",
+			"( state[3] != sN and  state[9] != sN and  state[10] != sN and  state[8] != sN)",
+			"( state[3] != sN and  state[9] != sN and  state[12] != sN and  state[8] != sN)",
+			"( state[2] != sN and  state[8] != sN)",
+			"( state[3] != sN and  state[9] != sN and  state[8] != sN)",
+			"( state[3] != sN and  state[9] != sN and  state[12] != sN and  state[8] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node IntraBrowser
+		"IntraBrowser",2,9,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{5,cU,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rA,1,5,16,12,8,-1,-1},
+			{rS,-1,5,16,12,8,-1,-1}
+		},
+		{//Inputs
+			{3,pA,0,{5,15}},
+			{6,pP,0,{5,15}},
+			{7,pA,0,{5,15}},
+			{10,pP,0,{5,15}},
+			{12,pA,0,{5,15}},
+			{9,pP,0,{5,15}},
+			{11,pF,0,{5,15}},
+			{13,pA,0,{5,15}},
+			{6,pF,1,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[3] != sN and  state[6] != sN)",
+			"( state[6] != sN)",
+			"( state[9] != sN and  state[7] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[6] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[6] != sN)",
+			"( state[6] != sN)"
+
+		} //open end
+	},	 // Node end
+
+	{ // Node KIntHack
+		"KIntHack",1,9,	// node Name, Roles' number,  Inputs' number
+	// typedef    "node_t"
+	{7,cK,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rS,-1,-1,25,-1,18,-1,-1}
+		},
+		{//Inputs
+			{4,pF,0,{-1,-1}},
+			{3,pF,0,{-1,-1}},
+			{5,pF,0,{-1,-1}},
+			{6,pF,0,{-1,-1}},
+			{10,pF,0,{-1,-1}},
+			{12,pF,0,{-1,-1}},
+			{9,pF,0,{-1,-1}},
+			{11,pF,0,{-1,-1}},
+			{13,pF,0,{-1,-1}}
+		}
+	},
+		{ //open for inputs
+			"( state[9] != sN and  state[6] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[3] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[6] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[10] != sN and  state[7] != sN)",
+			"( state[9] != sN and  state[12] != sN and  state[7] != sN)"
+
+		} //open end
+	}	 // Node end
+}	 /* System */

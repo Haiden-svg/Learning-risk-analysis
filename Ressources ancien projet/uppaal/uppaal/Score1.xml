@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>//  global declarations .
+
+const int nbVar :=5;
+const int MaxInput := 4; // per node
+const int NbStates := 4; // 0 == F, 1 == M, 2 == B, 3 == N
+
+const int sF:=0; const int sM:=1; const int sB:=2; const int sN:=3; //node states
+const int pF:=0; const int pP:=1; const int pA:=2; //attacker position
+const int cU:=0; const int cR:=1; const int cK:=2; // knode type
+
+broadcast chan startCh; // start sychro
+
+
+const int NU := -1; //nout used
+
+const int nbNodes := 2; // component number
+
+typedef struct {
+    int[NU,nbNodes-1] node_id; // input node id,  -1 not used
+    int[NU,2] attack_position; //  0 == Functional, 1 == Path, 2 == Access
+    int[NU,7] cost[NbStates][NbStates];  // attacker node state, attacked node target state,  -1 not possible, external node state, target local state
+} input_t; // input description, for each interaction
+
+
+typedef struct {
+    int[0,nbNodes-1] node_id;
+    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+    int[0,MaxInput-1] nb_Inputs;
+    int[NU,7] cost[NbStates][NbStates];  //  local attacker node state, attacked node target state,  -1 not possible, external node state, target local state
+    bool locSecretVar[nbVar]; // if true, secret to be retrived here
+    int[NU,7] costVarGet, costVarTransf;
+    input_t in[MaxInput]; // too much
+} node_t; // node description, for topology
+
+
+// sF:=0; const int sM:=1; const int sB:=2; const int sN:=3; //node states
+
+const node_t topology[nbNodes] := {
+    {0,cU,0, {{NU,NU,NU,NU},{NU,NU,2,1},{NU,5,NU,4},{NU,NU,NU,NU}}, {true, false, true,false, false},4,1, // node 0
+        {{  // node 0 input 0 
+            NU, NU,{{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU}}
+        },
+        {  // node 0 input 1 
+            NU, NU,{{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU}}
+        },
+        {  // node 0 input 2
+            NU, NU, {{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU}}
+        },
+        {  // node 0 input 3
+            NU, NU, {{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU}}
+        }}
+    },
+    {1,cU,1, {{NU,NU,NU,NU},{NU,NU,2,1},{NU,5,NU,4},{NU,NU,NU,NU}}, {false, true, false,true, false},4,1,// node 1 
+        {{  // node 0 input 0
+            0, pF, {{NU,NU,NU,NU},{NU,4,2,1},{NU,5,3,1},{NU,NU,NU,1}}
+        },
+        {  // node 0 input 1
+            NU, NU, {{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU}}
+        }, 
+        {  // node 0 input 2
+            NU, NU, {{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU}}
+        },
+        {  // node 0 input 3
+            NU, NU, {{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU},{NU,NU,NU,NU}}
+        }} 
+    } // list of input nodes of node 1
+} ;    
+
+
+typedef struct {
+    int[0,NbStates-1] location; // 0 == F, 1 == M, 2 == B, 3 == N
+    bool locKnowledgeVar[nbVar]; 
+} nodeState_t;  // node state, init all = F == 1
+
+nodeState_t nodeState[nbNodes]:={ 
+    {sM , {false, false, false,false, false}},
+    {sF , {false, false, false,false, false}}
+} ;
+
+const int maxCosts:=20;
+int costs:=0;
+
+
+
+int[NU,maxCosts] getMinInputCost(int[NU,nbNodes-1] node_id, int[0,NbStates-1] source_state, int[0,NbStates-1] target_state) {  // node qui est visé et son état acuel et son état visé
+    int cost:=-1; int attackerState:=-1; int costTmp:=-1;
+    int[0,nbNodes] nbInputs; 
+    nbInputs := topology[node_id].nb_Inputs;
+	for(i : int[0,MaxInput-1] ) {
+	    if (i&lt;(nbInputs)) {
+            attackerState:=nodeState[topology[node_id].in[i].node_id].location;
+            costTmp:=topology[node_id].in[i].cost[attackerState][target_state];
+            if ((costTmp&gt;=0) and (costTmp&gt;cost)) cost:=costTmp;
+        } 
+	}
+    if ( (cost+costs)&lt;= maxCosts )	return cost; else return -1;
+}
+
+void updateNode (int[NU,nbNodes-1] node_id, int[0,NbStates-1] source_state,int[0,NbStates-1] target_state) {
+    int tmp:=getMinInputCost(node_id, source_state,target_state);
+    if (tmp &gt;0) costs:=costs+tmp;
+    nodeState[node_id].location:=target_state;
+}
+
+
+int[NU,maxCosts] getLocalCost(int[NU,nbNodes-1] node_id, int[0,NbStates-1] source_state, int[0,NbStates-1] target_state) {  // node qui est visé et son état acuel et son état visé
+    int cost:=topology[node_id].cost[source_state][target_state];
+    if ( (cost&gt;=0) and ((cost+costs)&lt;= maxCosts ))	return cost; else return -1;
+}
+
+void updateLocal (int[NU,nbNodes-1] node_id, int[0,NbStates-1] source_state,int[0,NbStates-1] target_state) {
+    int tmp:=getLocalCost(node_id, source_state,target_state);
+    if (tmp &gt;0) costs:=costs+tmp;
+    nodeState[node_id].location:=target_state;
+}
+
+
+int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+    int[NU,maxCosts] cost;
+    for(i : int[0,nbVar-1] ) {
+        if ((!nodeState[node_id].locKnowledgeVar[i]) and topology[node_id].locSecretVar[i] ) {
+            cost:=topology[node_id].costVarGet;
+            if ((cost &gt;=0) and (cost+costs)&lt;=maxCosts) return cost;
+        }
+    };
+    return -1;
+}
+
+void setLocalVar(int[NU,nbNodes-1] node_id){
+       int[NU,maxCosts] cost;
+    for(i : int[0,nbVar-1] ) {
+        if ((!nodeState[node_id].locKnowledgeVar[i]) and topology[node_id].locSecretVar[i] ) {
+            cost:=topology[node_id].costVarGet;
+            if ((cost &gt;=0) and (cost+costs)&lt;=maxCosts) {
+                costs:=costs+cost; nodeState[node_id].locKnowledgeVar[i]:=true; return;
+            }
+        }
+    }; 
+}
+</declaration>
+	<template>
+		<name>AppRoot</name>
+		<location id="id0" x="0" y="0">
+		</location>
+		<init ref="id0"/>
+	</template>
+	<template>
+		<name>Kernel</name>
+		<location id="id1" x="0" y="0">
+		</location>
+		<init ref="id1"/>
+	</template>
+	<template>
+		<name x="5" y="5">AppUser</name>
+		<parameter>int[0, nbNodes-1] id</parameter>
+		<declaration>// Place local declarations here.
+</declaration>
+		<location id="id2" x="-1232" y="-493">
+			<name x="-1242" y="-527">F</name>
+		</location>
+		<location id="id3" x="-952" y="-484">
+			<name x="-962" y="-518">N</name>
+		</location>
+		<location id="id4" x="-960" y="-280">
+			<name x="-985" y="-314">M</name>
+		</location>
+		<location id="id5" x="-1241" y="-289">
+			<name x="-1283" y="-315">B</name>
+		</location>
+		<location id="id6" x="-739" y="-365">
+			<name x="-749" y="-399">Start</name>
+		</location>
+		<init ref="id6"/>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-1232" y="-221">(getLocalCost(id,sM,sB)&gt;=0)</label>
+			<label kind="assignment" x="-1232" y="-204">updateLocal(id,sM,sB)</label>
+			<nail x="-1147" y="-204"/>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-1198" y="-280">(getLocalCost(id,sB,sM)&gt;=0)</label>
+			<label kind="assignment" x="-1190" y="-263">updateLocal(id,sB,sM)</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-892" y="-459">nodeState[id].location==sN</label>
+			<label kind="synchronisation" x="-858" y="-442">startCh?</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-1096" y="-459">nodeState[id].location==sF</label>
+			<label kind="synchronisation" x="-1071" y="-442">startCh?</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-875" y="-314">nodeState[id].location==sM</label>
+			<label kind="synchronisation" x="-875" y="-297">startCh?</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-1181" y="-331">nodeState[id].location==sB</label>
+			<label kind="synchronisation" x="-1139" y="-314">startCh?</label>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-1028" y="-204">(LocalVarCost(id)&gt;=0)</label>
+			<label kind="assignment" x="-1020" y="-187">setLocalVar(id)</label>
+			<nail x="-1011" y="-204"/>
+			<nail x="-909" y="-204"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-1394" y="-442">(getMinInputCost(id,sF,sB)&gt;=0)</label>
+			<label kind="assignment" x="-1368" y="-425">updateNode(id,sF,sB)</label>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-1011" y="-382">(getLocalCost(id,sM,sN)&gt;=0)</label>
+			<label kind="assignment" x="-1003" y="-365">updateLocal(id,sM,sN)</label>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-1190" y="-527">(getMinInputCost(id,sF,sN)&gt;=0)</label>
+			<label kind="assignment" x="-1173" y="-510">updateNode(id,sF,sN)</label>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-1190" y="-408">(getMinInputCost(id,sF,sM)&gt;=0)</label>
+			<label kind="assignment" x="-1190" y="-391">updateNode(id,sF,sM)</label>
+		</transition>
+	</template>
+	<template>
+		<name>Start</name>
+		<location id="id7" x="-76" y="-68">
+			<name x="-86" y="-102">Running</name>
+		</location>
+		<location id="id8" x="-306" y="-93">
+			<name x="-316" y="-127">Start</name>
+		</location>
+		<init ref="id8"/>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-179" y="-98">true</label>
+			<label kind="synchronisation" x="-212" y="-85">startCh!</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+
+App0 = AppUser(0);
+App1 = AppUser(1);
+Go=Start();
+
+// List one or more processes to be composed into a system.
+system   Go, App0, App1;</system>
+	<queries>
+		<query>
+			<formula>E&lt;&gt; ( App1.N and costs&lt;5)
+</formula>
+			<comment></comment>
+		</query>
+	</queries>
+</nta>

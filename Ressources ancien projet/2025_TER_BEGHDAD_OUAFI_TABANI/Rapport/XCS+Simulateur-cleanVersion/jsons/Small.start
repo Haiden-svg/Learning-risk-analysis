@@ -1,0 +1,20 @@
+{
+    "init":{
+        "states": [
+            {
+                "softComp": "IntHack",
+                "location": "MALW"
+            }
+         ],
+        "secrets": [
+        ]
+    },
+    "final":{
+        "states": [
+            {
+                "softComp": "IoTSrv2",
+                "location": "BADD"
+            }
+         ]
+    }
+}

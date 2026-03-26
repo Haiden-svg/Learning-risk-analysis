@@ -1,0 +1,322 @@
+// Place local declarations here.
+	const int NbInputs := 6; // per node
+	const int diM = (NbInputs>0)? NbInputs : 1;
+    const int NbRoles = 2;
+    const int diMr = (NbRoles>0)? NbRoles : 1;
+
+    typedef struct {
+        int[NU,nbNodes-1] node_id; // input node id,  -1/NU not used
+        int[NU,2] attack_position; // pF 0 == Functional, pP 1 == Path,pA 2 == Access
+        int [0,diMr] roleId; // role id of attacked component, local id
+        int protCost[2];  // attack on protocols:  session entrance cost (0 for pF),deny of service (both already adapted to the attacker position)  
+    } input_t; // input description, for each interaction
+ 
+	
+	typedef struct {
+	    int[0,nbNodes-1] node_id;
+ 	    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+        int minInputBd,minInput; // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB , mandatory roles no included
+	    int[NU,MaxUnitCost] costVarGet; // steal all the secrets stored locally, by already installed local malware 
+	    bool locSecretVar[nbVar]; // if true, secret to be retrived here
+        int AnomDetParam[3];  // 3 costs for bypassing anomaly detection : m, b, n, if <0, monitoring disabled
+        int RoleParams[diMr][8]; // role params, 8 values :  
+                                    // role type: rA==app rS==system, importance (!= NU only for rA) Nu=='do not consider' 0=='no mandatory' 1=='must be active',  
+                                    // bad data acceptability cost, 3 malware install costs :m,b,n,
+                                    // cost of theft of locally stored secrets by remote malware, 
+                                    // key number protecting the role (i.e. if the attacker already has the key, attacking the session will cost zero)
+                                                    // we consider that producing non acceptable bad data costs nothing !!!
+	    input_t in[diM]; 
+	} node_t; // node description, for topology
+
+
+	const node_t node =
+	{4,cU,1,0,-1,{false,false,false,false,false},{-1,-1,-1},
+		{//Roles
+			{rA,-1,5,16,12,8,-1,2},
+			{rS,-1,5,16,12,8,-1,-1}
+		},
+		{//Inputs
+			{1,pF,0,{5,15}},
+			{3,pP,0,{5,15}},
+			{0,pA,0,{5,15}},
+			{5,pP,0,{5,15}},
+			{2,pP,0,{5,15}},
+			{5,pF,1,{-1,-1}}
+		}
+	};
+
+	
+	bool reachable (int[0,diM-1] inp) { // true if this node can be visible by the input_node
+	if (inp ==0) return ( nodeState[3].location != sN and  nodeState[2].location != sN and  nodeState[5].location != sN);
+	if (inp ==1) return ( nodeState[3].location != sN and  nodeState[5].location != sN);
+	if (inp ==2) return ( nodeState[3].location != sN and  nodeState[0].location != sN and  nodeState[5].location != sN);
+	if (inp ==3) return ( nodeState[5].location != sN);
+	if (inp ==4) return ( nodeState[3].location != sN and  nodeState[2].location != sN and  nodeState[5].location != sN);
+	if (inp ==5) return ( nodeState[5].location != sN);
+	    return false;
+	} 
+
+    int minBadDataCost() { // returns the sum of costs for all inputs capable of producing bad data, Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBd[diMr] = {NU,NU};
+        bool rolOk[diMr] = {false,false};  // true if a role can stay OK thanks to legitimate producers
+        
+        int bdCost=0, tcost=NU, tr=0,totRolOK=0,totRolBd=0, mustcopromise=NU, nbCompr=0,activityCost=0; // tcost total min cost        
+        int tr1=NU, j=NU;
+	    if (NbInputs <=0) return NU;if (node.node_type==cK) return NU;
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of B data submissions, B cost in composed from two values, session breaking and acceptable bad data generation, sum of Ok Weight 
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=NU)) { // available inputs,  no system and important roles only
+	       int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].location;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           bool secrPresent = (node.RoleParams[role][7]<0)?false:KnowledgeVar[node.RoleParams[role][7]];
+           int costDir=node.RoleParams[role][2], protCost=(secrPresent)?0:node.in[i].protCost[0], tt=NU; // costDir : cost of creation of acceptable data by role, protCost : cost of protocol break
+
+           if (attack_position==pF) tt=costDir; else if ((protCost==NU) or (costDir==NU)) tt=NU; else tt=costDir+protCost;
+           if ( (tt!=NU) and ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==pF) ) ) ) if (rolCostBd[role]==NU or rolCostBd[role]>tt) rolCostBd[role]=tt; // looking for the minimal cost of roles !!!!!!!!!!!!!!!!
+           if ( (attackerState==sF) and (attack_position==pF) ) rolOk[role]=true;
+	 	}
+        // number of roles OK and potentially compromisable, compliance with mandatory roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS) { //no system roles
+            if ( node.RoleParams[role][1]==1) {  // mandatory role
+                if ( (rolCostBd[role]<=NU) and not rolOk[role] ) return NU; // impossible to compromise not active mandatory role
+                if (not rolOk[role] ) mustcopromise = (mustcopromise>NU)?mustcopromise:0+rolCostBd[role]; // cost of compromission of all manadatrory and not OK roles
+                if ( (tcost==NU) or (rolCostBd[role]<tcost) ) tcost=rolCostBd[role]; // minimal cost of  the compromissions of one of the mandatory role => tcost 
+            } else if ( (node.RoleParams[role][1]==0) and rolOk[role] ) totRolOK++; //number of OK optionnal roles
+        }
+
+        //if ( (totRolBmf + totRolOK) < node.minInput ) return NU; // no enough of OK or possible to compromise  optional roles, i.e. not enough of possible active roles
+        if ( (mustcopromise>NU) and (totRolOK >=node.minInput) ) return mustcopromise;
+        
+      // adding necessary non active optional roles for minimal activity
+        nbCompr =node.minInput - totRolOK;
+        activityCost=0;totRolBd=0;
+        for(k : int[0,diMr-1] ) if (nbCompr>0){
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBd[role] > NU) and not rolOk[role] )  { //only optional, no system roles
+            if ( (tr1==NU) or (tr1>rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; totRolBd++; activityCost += tr1; rolCostBd[j]=NU; totRolOK++;}
+        }   
+        if (nbCompr>0) return NU; // impossible to have enough active optional roles
+
+       if (mustcopromise>NU) return activityCost + mustcopromise; // no necessary to add supplementary optionnal role to achieve minInputBd
+
+       // adding necessary non active optional roles for input bad data
+        nbCompr =node.minInputBd - totRolBd; // totRolBd === already compromised optional roles to maintain activity
+        bdCost=0;
+        for(k : int[0,diMr-1] ) if (nbCompr>0){ // for OK role only
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBd[role] > NU) and not rolOk[role] )  { //only optional roles
+            if ( (tr1==NU) or (tr1>rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; bdCost += tr1; rolCostBd[j]=NU; }
+        }   
+
+         if ( (nbCompr>0) and (tcost<0) ) return NU; // not enough of bad data and impissible to compromise manadatory roles  
+         if (tcost<0) return activityCost+ bdCost;
+         return activityCost+(tcost<bdCost)?tcost:bdCost;       
+    }
+
+    int BadData(int[NU,nbNodes-1] node_id, bool fallback) { // fallback == true if possible fallback will be thrown
+        int badDataCost, suppl=0;
+        if (fallback and (node.AnomDetParam[sB-1] < 0) ) return NU;
+        if ( (not fallback) and (node.AnomDetParam[sB-1] >= 0) ) suppl=node.AnomDetParam[sB-1];
+        badDataCost=minBadDataCost();
+        if (badDataCost == NU) return NU;
+        badDataCost+=suppl;
+        if ( (badDataCost+costs)<= maxCosts ) return badDataCost;
+        return NU;
+    }
+
+    void updateBadData(int[NU,nbNodes-1] node_id, bool fallback) {
+        int badDataCost=minBadDataCost(), suppl=0;
+        if ( (not fallback) and (node.AnomDetParam[sB-1] >= 0) ) suppl=node.AnomDetParam[sB-1];
+        costs += badDataCost+suppl;
+        nodeState[node_id].location=sB;
+    }
+
+
+    int minNonDispCost() { // returns the sum of costs for all inputs capable to produce Non availability state (sN), Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBdM[diMr] = {NU,NU};
+        bool rolOk[diMr] = {false,false};
+        bool tmp=false;
+        int bdCost=0, tcost=NU, tr=0, nbOKnMand=0, nbtocomp=0;// tcost total min cost        
+ 
+	    if (NbInputs <=0) return NU;
+
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of non acceptable data submissions, this cost 0 for pF position and session breaking for others, sum of OkWeight 
+
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=NU)) { // available and no system and important 
+	       int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].location;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           bool secrPresent = (node.RoleParams[role][7]<0)?false:KnowledgeVar[node.RoleParams[role][7]];
+           int costDir=node.RoleParams[role][2], protCost=(secrPresent)?0:node.in[i].protCost[0], tt=NU;
+
+           if ( (attackerState!=sF) and (attack_position==pF) and (node.RoleParams[role][1]==1)) return 0; // mandatory input non available or compromised, can go automatically to non available with 0 cost
+
+           if (attack_position==pF) tt=0; else tt=protCost;
+           if ( ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==pF) ) ) and (tt!=NU) ) if (rolCostBdM[role]==NU or rolCostBdM[role]>tt) rolCostBdM[role]=tt; // looking for the minimal cost of roles
+           if ( (attackerState==sF) and (attack_position==pF) ) rolOk[role]=true;
+	 	}
+
+        // min cost of mandatory roles compromissions and count of compromisable OK roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS ) {
+            if (node.RoleParams[role][1]==1 ) {// mandatory role  
+                if (not rolOk[role] ) return 0; // pF Position  not available
+                if (rolCostBdM[role]!=NU) {
+                    if ( (tcost==NU) or (rolCostBdM[role]<tcost) ) tcost=rolCostBdM[role]; // minimal cost of  the compromissions of the mandatory role => tcost 
+                }            
+            } else if (node.RoleParams[role][1]==0) if (rolOk[role]) nbOKnMand++;
+            
+        }
+        if ( nbOKnMand < node.minInput ) return 0; // not enough of non mandatory roles are active
+        nbtocomp=1+nbOKnMand-node.minInput;
+        // minimal cost of the non mandatory roles' compromission
+        bdCost=NU;
+        for(k : int[0,diMr-1] ) {
+          int tr1=NU, j=NU;
+          //choice of a role with the minimal cost 
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBdM[role] != NU) and (tr<nbtocomp) )  { //only non mandatory roles
+            if ( (tr1==NU) or (tr1>rolCostBdM[role]) )  { tr1=rolCostBdM[role]; j=role; } // role of min cost
+          }
+          if (tr1!=NU) { tr++; bdCost = (bdCost!=NU)?bdCost:0 + tr1; rolCostBdM[j]=NU; }
+        }     
+        if (tr < nbtocomp) return tcost; // impossible to comproomise enough of no mandatory roles
+        if (tcost==NU) return bdCost;    // it was impossible to compromise mandatory roles  
+        return bdCost>tcost?tcost:bdCost; // choice between costs of mandatory or non mandatory role compromissions 
+    }
+
+
+
+	int NoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {  // true if essential producers present on pF position or if necessary min of comm destruction by malwares!!!!
+        int NoProducerDispCost, suppl=0;
+        if (fallback and (node.AnomDetParam[sN-1] < 0)) return NU;
+        if ( (not fallback) and (node.AnomDetParam[sN-1] >= 0) ) suppl=node.AnomDetParam[sN-1];
+        NoProducerDispCost=minNonDispCost();
+        if (NoProducerDispCost == NU) return NU;
+        NoProducerDispCost+=suppl;
+        if ( (NoProducerDispCost+costs)<= maxCosts ) return NoProducerDispCost;
+        return NU;
+	}
+	
+    void updateNoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {
+        int suppl=0;
+        int NoProducerDispCost=minNonDispCost();
+        if ( (not fallback) and (node.AnomDetParam[sN-1] >= 0) ) suppl=node.AnomDetParam[sN-1];
+        costs += NoProducerDispCost+suppl;
+        nodeState[node_id].location=sN;
+    }
+
+
+	int[NU,MaxUnitCost] MinCostMalware(int[NU,nbNodes-1] node_id,int[0,NbStates-1] target_state, bool fallback) {  // malware on input or bad data et pF (partner) position  
+	    int cost=NU,tcost=NU, suppl=0;
+        if ((node.node_type==cK) and (target_state==sB)) return NU;
+        if (fallback and (node.AnomDetParam[sM-1] < 0) ) return NU;
+        if ( (not fallback) and (node.AnomDetParam[sM-1] > 0) ) suppl=node.AnomDetParam[sM-1];
+	    if (NbInputs <=0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if ( (nodeState[node.in[i].node_id].location==sM) or ( (nodeState[node.in[i].node_id].location==sB) and (node.in[i].attack_position==pF) )) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            bool secrPresent = (node.RoleParams[role][7]<0)?false:KnowledgeVar[node.RoleParams[role][7]];
+            if (node.RoleParams[role][0]==rS) tcost=0; else tcost=(secrPresent)?0:node.in[i].protCost[0];
+            if (tcost>NU) if (node.RoleParams[role][2+target_state]>NU) tcost+=node.RoleParams[role][2+target_state];
+	        if (tcost>NU) if ( (cost==NU) or (tcost<cost) ) cost:=tcost; 
+		}
+        if (cost<=NU) return NU;
+        cost+=suppl;
+	    if ( (cost+costs)<= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void updateMalware(int[NU,nbNodes-1] node_id, int[0,NbStates-1] target_state, bool fallback) {
+	    int[NU,MaxUnitCost] tmp:=MinCostMalware(node_id,target_state, fallback);
+	    if (tmp >0) costs:=costs+tmp;
+	    nodeState[node_id].location=target_state;
+	}
+	
+
+	int[NU,MaxUnitCost] RemoteVarCost(int[NU,nbNodes-1] node_id) {  // malware on inputs try to steal all locally stored secrets 
+	    int cost=NU,tcost=NU,z=0;
+	    if (NbInputs <=0) return NU;
+	    for(i : int[0,nbVar-1] ) if ((!KnowledgeVar[i]) and node.locSecretVar[i] ) z++;
+        if (z==0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if (nodeState[node.in[i].node_id].location==sM) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            bool secrPresent = (node.RoleParams[role][7]<0)?false:KnowledgeVar[node.RoleParams[role][7]];
+            if (node.RoleParams[role][0]==rS) tcost=0; else tcost=(secrPresent)?0:node.in[i].protCost[0];
+            if (tcost>NU) if (node.RoleParams[role][6]>NU) tcost+=node.RoleParams[role][6];
+	        if (tcost>NU) if ( (cost==NU) or (tcost<cost) ) cost:=tcost; 
+		}
+        if (cost<=NU) return NU;
+ 	    if ( (cost+costs)<= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void setRemoteVar(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] tmp:=RemoteVarCost(node_id);
+	    if (tmp >0) costs:=costs+tmp;
+        for(i : int[0,nbVar-1] ) if ((!KnowledgeVar[i]) and node.locSecretVar[i] ) KnowledgeVar[i]=true;
+	}
+
+	
+	int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) {
+	        if ((!KnowledgeVar[i]) and node.locSecretVar[i] ) {
+	            cost:=node.costVarGet;
+	            if ((cost+costs)<=maxCosts) return cost;
+                return NU;
+	        }
+	    };
+	    return NU;
+	}
+	
+	void setLocalVar(int[NU,nbNodes-1] node_id){
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) if ((!KnowledgeVar[i]) and node.locSecretVar[i] ) KnowledgeVar[i]:=true; 
+	    cost:=node.costVarGet;
+	    costs:=costs+cost;
+        return;
+	}
+
+    int MinFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal<0) return bd;
+        if (bd<0) return mal;
+        if (bd>mal) return mal;
+        return bd;
+    }
+    void UpdateFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal<0) {updateBadData(node_id,fallback);return;};
+        if (bd<0) {updateMalware(node_id,sB,fallback);return;};
+        if (bd>mal) {updateMalware(node_id,sB,fallback);return;};
+        updateBadData(node_id,fallback);return;
+    }
+
+    int MinFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal<0) return noProd;
+        if (noProd<0) return mal;
+        if (noProd>mal) return mal;
+        return noProd;
+    }
+    void UpdateFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal<0) {updateNoProducerDisp(node_id,fallback);return;};
+        if (noProd<0) {updateMalware(node_id,sN,fallback);return;};
+        if (noProd>mal) {updateMalware(node_id,sN,fallback);return;};
+        updateNoProducerDisp(node_id,fallback);return;
+    }
+
+
+    int MinFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        return MinCostMalware(node_id,sM,fallback);
+    }
+    void UpdateFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        updateMalware(node_id,sM,fallback);return;
+    }

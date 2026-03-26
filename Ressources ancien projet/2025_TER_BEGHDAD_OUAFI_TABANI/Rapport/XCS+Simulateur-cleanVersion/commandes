@@ -1,0 +1,46 @@
+for node in netAutomata.model.nodes: print(node.name, node.roles[0].type)
+
+
+netAutomata.model.nodes[0].roles[0].type
+
+# Afficher tous les nœuds et leurs connexions
+for i in range(system.nbNodes):
+    node = system.nodes[i]
+    print(f"Node {i}: {node.name}")
+    for inp in node.inputs:
+        source_node = system.nodes[inp.sourceNodeIndex]
+        print(f"  ← Input from: {source_node.name} (Node {inp.sourceNodeIndex})")
+
+
+# Afficher les transitions possibles
+lnext = netAutomata.next(maxCost)
+for i, transition in enumerate(lnext):
+    print(f"Transition {i}: {transition}")
+
+# Pour un nœud spécifique
+node_index = 0  # Exemple avec le premier nœud
+node = system.nodes[node_index]
+print(f"Nom du nœud: {node.name}")
+print(f"Type: {node.nodeType}")
+print(f"Classe logicielle: {node.softwareClass}")
+
+# Afficher les entrées (qui montre les connexions entrantes)
+print("Connexions entrantes:")
+for i, inp in enumerate(node.inputs):
+    source_node = system.nodes[inp.sourceNodeIndex]
+    print(f"  Entrée {i}: depuis {source_node.name} (position: {inp.position}, rôle: {inp.roleIndex})")
+    print(f"  Coûts de rupture de protection: {inp.protBreakCosts}")
+
+# Créer une représentation visuelle des connexions
+connections = {}
+for i in range(system.nbNodes):
+    node = system.nodes[i]
+    connections[node.name] = []
+    for inp in node.inputs:
+        source_node = system.nodes[inp.sourceNodeIndex]
+        connections[node.name].append(source_node.name)
+
+# Afficher les connexions
+for node, sources in connections.items():
+    print(f"Node: {node}")
+    print(f"  Connected to: {', '.join(sources)}")
