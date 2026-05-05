@@ -1,0 +1,20 @@
+{
+    "init":{
+        "states": [
+            {
+                "softComp": "Hacker",
+                "location": "MALW"
+            }
+         ],
+        "secrets": [
+        ]
+    },
+    "final":{
+        "states": [
+            {
+                "softComp": "HttpSrv",
+                "location": "BADD"
+            }
+         ]
+    }
+}

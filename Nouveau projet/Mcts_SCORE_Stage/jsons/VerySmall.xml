@@ -1,0 +1,3718 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>//  global declarations .
+
+
+// This research has been carried out in IRT SystemX, Paris-Saclay, France, and therefore granted with public funds of the French Program “Investissements d’Avenir”.
+// This code is published under license MIT : https://spdx.org/licenses/MIT.html
+
+const int NU = -1; 
+
+const int nbVar =1;
+const int dnbVar = (nbVar&gt;0)? nbVar : 1;
+const int NbStates = 4; // 0 == F, 1 == M, 2 == B, 3 == N
+
+const int sF=0; const int sM=1; const int sB=2; const int sT=2; const int sN=3;//node states, F:functional, M:malware, B/T: bad==tainted data, N: non available, do nor change values !!!!!
+const int mand=1; const int opt=0; const int transp=NU;
+// old denomination const int pF=0; const int pP=1; const int pA=2; //attacker position
+const int peer=0; const int mitm=1; const int side=2; //attacker position, new format
+const int cU=0; const int cR=1; const int cK=2; // knode type , User space, Root, Kernel Space
+const int user=0; const int root=1; const int kernel=2;
+const int rA=0, rS=1; // application , system role
+const int MaxUnitCost=100; // max unitary cost
+//const int MaxInputWeight=10; // abandonned, too complex  
+//const int MaxInputWeights=MaxInputWeight*10; // abandonned, too complex  
+const int MaxRoles=10; // new max roles per components
+
+
+broadcast chan startCh; // start sychro
+
+broadcast chan reset; // used to reset nodes after an anomaly detection
+
+
+
+const int nbNodes = 6; // component number
+
+
+typedef struct {
+    int[0,NbStates-1] locat; // 0 == F, 1 == M, 2 == B, 3 == N
+} nodeState_t;  // node state, init all = F == 1
+
+
+// Secrets originally stored
+
+const bool StoredSecrets [nbNodes] [dnbVar]={
+//	
+
+	{false},	//Browser
+	{false},	//Hacker
+	{false},	//HttpSrv
+	{false},	//Linux
+	{false},	//Routing
+	{false}	//Windows
+};
+
+const int NodesKernels [nbNodes] ={
+5,-1,3,-1,-1,-1
+};
+
+
+// Stolen Secrets 
+bool StolenSecrets[dnbVar]={false};
+
+
+
+nodeState_t nodeState[nbNodes]={ 
+{	sF } /* node: 0:Browser */,
+{	sM } /* node: 1:Hacker */,
+{	sF } /* node: 2:HttpSrv */,
+{	sF } /* node: 3:Linux */,
+{	sF } /* node: 4:Routing */,
+{	sF } /* node: 5:Windows */
+};
+
+const int maxCosts=200;
+int[-1,MaxUnitCost*20] costs=0;
+const int maxSteps=6;
+int [0,maxSteps] stepNb=0;
+
+
+const int fallBackMode[nbNodes][3]= { // fallback number for sM, sB or sN locals
+{NU,NU,NU} /* node: 0:Browser */,
+{NU,NU,NU} /* node: 1:Hacker */,
+{NU,NU,NU} /* node: 2:HttpSrv */,
+{NU,NU,NU} /* node: 3:Linux */,
+{NU,NU,NU} /* node: 4:Routing */,
+{NU,NU,NU} /* node: 5:Windows */
+};
+
+void FallBack(int node_id, int[0,NbStates-1] locat) {
+
+int mode=fallBackMode[node_id][locat-1];
+
+if (mode==NU) return;
+
+    return;
+}</declaration>
+	<template>
+		<name x="5" y="5">Browsert</name>
+		<parameter>const int[0, nbNodes-1] id</parameter>
+		<declaration>// Place local declarations here.
+
+// This research has been carried out in IRT SystemX, Paris-Saclay, France, and therefore granted with public funds of the French Program “Investissements d’Avenir”.
+// This code is published under license MIT : https://spdx.org/licenses/MIT.html
+
+	const int NbInputs = 5; // per node
+	const int diM = (NbInputs&gt;0)? NbInputs : 1;
+    const int NbRoles = 3;
+    const int kernelIndex = 5;
+    const int diMr = (NbRoles&gt;0)? NbRoles : 1;
+
+    typedef struct {
+        int[NU,nbNodes-1] node_id; // input node id,  -1/NU not used
+        int[NU,2] attack_position; // peer 0 , mitm 1 == ,side 2 
+        int [0,diMr] roleId; // role id of attacked component, local id
+        bool tunnelOn; // true if tunnel on
+        int protCost[4];  // attack on protocols:  "0" session entrance cost (0 for peer), "1" break (down), tunnel compromission costs ("2" tunnel entrance, "3" tunnel break) , already adapted to the attacker position, NU for costs == impossible to break  
+    } input_t; // input description, for each interaction
+ 
+	
+	typedef struct {
+	    int[0,nbNodes-1] node_id;
+ 	    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+        int plausThreshold,actThreshold; // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB , mandatory roles no included
+	    int[NU,MaxUnitCost] secrTheftCost; // steal all the secrets stored locally, by already installed local malware 
+        int AnomDetParam[3];  // 3 costs for bypassing anomaly detection : m, b, n, if &lt;0, monitoring disabled
+        int RoleParams[diMr][7]; // role params, 7 values :  
+                                    // 0 role type: rA==app rS==system, 
+                                    // 1 importance (!= NU only for rA) Nu=='transparent' 0=='optional' 1=='mandatory',  
+                                    // 2 bad data acceptability cost, 
+                                    // 3,4,5 malware install costs :malware ,bad data only ,non available only,
+                                    // 6 cost of theft of locally stored secrets by remote malware
+	    input_t in[diM]; 
+	} node_t; // node description, for topology
+
+const int roleProtectKey[diMr][dnbVar]={
+	{false},
+	{false},
+	{false}
+};
+
+	const node_t node =
+	{0,user,1,0,10,{NU,NU,NU},
+		{//Roles
+			{rA,mand,5,25,20,15,20},
+			{rS,mand,NU,20,10,1,10},
+			{rS,mand,NU,10,10,1,10}
+		},
+		{//Inputs
+			{2,peer,0,false,{25,0,NU,NU}}	/* HttpSrv	*/,
+			{3,mitm,0,false,{25,0,NU,NU}}	/* Linux	*/,
+			{4,mitm,0,false,{25,0,NU,NU}}	/* Routing	*/,
+			{5,mitm,0,false,{25,0,NU,NU}}	/* Windows	*/,
+			{5,peer,2,false,{0,NU,NU,NU}}	/* Windows	*/
+		}
+	};
+
+
+
+ 
+     bool isFallBackActiv(int[0,nbNodes-1] NodeIndex,int[0,NbStates-1] Targetlocation) {
+        return (node.AnomDetParam[Targetlocation-1] != NU) and ( fallBackMode[node.node_id][Targetlocation-1] !=NU);
+    }
+
+
+    bool key(int[0,nbNodes-1] sourceNodeIndex,int[0,nbVar-1] secrId) {
+        int idKernel=NodesKernels[sourceNodeIndex];
+        bool ret=StolenSecrets[secrId] or StoredSecrets[sourceNodeIndex][secrId];
+        if (idKernel&gt;0) ret=ret or StoredSecrets[idKernel][secrId];
+        return ret;
+    }
+
+
+    int ProtProtectCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2]; bool keyProtect=false;
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN) return NU;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+
+
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCost=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+        if (attack_position==peer) {if (keyProtect) return protCost;else return 0;} // special case for PF position, only application protocol is to consider
+        if (node.in[inpId].tunnelOn) { if (protCost==NU or tunCost==NU) return NU; else return (protCost+tunCost); } else return protCost;
+    }
+
+
+    int ProtDestructCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCostBr=node.in[inpId].protCost[1],tunCostBr=node.in[inpId].protCost[3]; bool keyProtect=false;
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2];
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN and attack_position==peer) return 0;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+ 
+
+        if (protCostBr==NU or (protCost!=NU and protCost&lt;protCostBr)) protCostBr=protCost; // normally it si easier to put down than enter, but we consider also the contray case
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCostBr=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+
+        if (attack_position==peer) {if (keyProtect) return protCostBr;else return 0;} // special case for PF position, only application protocol is to consider if key is available
+
+        if (node.in[inpId].tunnelOn) {
+            if (tunCost==NU or protCostBr==NU or ( (tunCost+protCost) &gt; tunCostBr ) ) return tunCostBr; // impossible to enter tunnel 
+            return (protCostBr+tunCostBr);
+        } else return protCostBr; // no tunel only application prooc is to consider
+    }
+
+
+	
+	bool reachable (int[0,diM-1] inp) { // true if this node can be visible by the input_node
+	if (inp ==0) return ( nodeState[5].locat != sN and  nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==1) return ( nodeState[5].locat != sN and  nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==2) return ( nodeState[5].locat != sN and  nodeState[4].locat != sN);
+	if (inp ==3) return ( nodeState[5].locat != sN);
+	if (inp ==4) return ( nodeState[5].locat != sN);
+	    return false;
+	} 
+
+
+    int minBadDataCost() { // returns the sum of costs for all inputs capable of producing bad data, Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBd[diMr] = {NU,NU,NU};
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers
+        
+        int bdCost=0, tcost=NU, tr=0,totRolOK=0,totRolBd=0, mustcopromise=NU, nbCompr=0,activityCost=0; // tcost total min cost        
+        int tr1=NU, j=NU;
+	    if (NbInputs &lt;=0) return NU;if (node.node_type==cK) return NU;
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of B data submissions, B cost in composed from two values, session breaking and acceptable bad data generation, sum of Ok Weight 
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=transp)) { // available inputs,  no system and important roles only
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int costDir=node.RoleParams[role][2], protCost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState), tt=NU; // costDir : cost of creation of acceptable data by role, protCost : cost of protocol break
+           if ((protCost==NU) or (costDir==NU)) tt=NU; else tt=costDir+protCost;
+           if ( (tt!=NU) and ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==peer) ) ) ) if (rolCostBd[role]==NU or rolCostBd[role]&gt;tt) rolCostBd[role]=tt; // looking for the minimal cost of roles !!!!!!!!!!!!!!!!
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+	 	}
+        // number of roles OK and potentially compromisable, compliance with mandatory roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS) { //no system roles
+            if ( node.RoleParams[role][1]==mand) {  // mandatory role
+                if ( (rolCostBd[role]&lt;=NU) and not rolOk[role] ) return NU; // impossible to compromise not active mandatory role
+                if (not rolOk[role] ) mustcopromise = (mustcopromise&gt;NU)?mustcopromise+rolCostBd[role]:rolCostBd[role]; // cost of compromission of all manadatrory and not OK roles
+                if ( (tcost==NU) or (rolCostBd[role]&lt;tcost) ) tcost=rolCostBd[role]; // minimal cost of  the compromissions of one of the mandatory role =&gt; tcost 
+            } else if ( (node.RoleParams[role][1]==0) and rolOk[role] ) totRolOK++; //number of OK optionnal roles
+        }
+
+        //if ( (totRolBmf + totRolOK) &lt; node.actThreshold ) return NU; // no enough of OK or possible to compromise  optional roles, i.e. not enough of possible active roles
+        if ( (mustcopromise&gt;NU) and (totRolOK &gt;=node.actThreshold) ) return mustcopromise;
+        
+      // adding necessary non active optional roles for minimal activity
+        nbCompr =node.actThreshold - totRolOK;
+        activityCost=0;totRolBd=0;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and not rolOk[role] )  { //only optional, no system roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; totRolBd++; activityCost += tr1; rolCostBd[j]=NU; totRolOK++;}
+        }   
+        if (nbCompr&gt;0) return NU; // impossible to have enough active optional roles
+
+       if (mustcopromise&gt;NU) return activityCost + mustcopromise; // no necessary to add supplementary optionnal role to achieve plausThreshold
+
+       // adding necessary active optional roles for input bad data
+        nbCompr =node.plausThreshold - totRolBd; // totRolBd === already compromised optional roles to maintain activity
+        bdCost=NU;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){ // for OK role only
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and rolOk[role] )  { //only optional roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; if (bdCost!=NU) bdCost += tr1; else bdCost = tr1; rolCostBd[j]=NU; }
+        }   
+
+        if ( (nbCompr&gt;0) and (tcost&lt;0) ) return NU; // not enough of bad data and impossible to compromise manadatory roles  
+        if (tcost&lt;0) {
+            if (bdCost&lt;0) return activityCost;
+            return activityCost + bdCost;
+        }
+        if (bdCost!=NU) return activityCost+(tcost&lt;bdCost)?tcost:bdCost;
+        return activityCost+tcost;       
+    }
+
+    int BadData(int[NU,nbNodes-1] node_id, bool fallback) { // fallback == true if possible fallback will be thrown
+        int badDataCost, suppl=0;
+        if (fallback and not isFallBackActiv(node_id,sB) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        badDataCost=minBadDataCost();
+        if (badDataCost == NU) return NU;
+        badDataCost+=suppl;
+        if ( (badDataCost+costs)&lt;= maxCosts ) return badDataCost;
+        return NU;
+    }
+
+    void updateBadData(int[NU,nbNodes-1] node_id, bool fallback) {
+        int badDataCost=minBadDataCost(), suppl=0;
+        if ( (not fallback) and  isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        costs += badDataCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sB;
+    }
+
+
+    int minNonDispCost() { // returns the sum of costs for all inputs able to produce Non availability state (sN), Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBdM[diMr] = {NU,NU,NU}; // 
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers, "no system roles only" are considered
+        int nbOKnMand=0, tcost=NU, nbtocomp=0;// tcost total min cost 
+        int bdCost=NU,tr=NU;
+  
+
+        // "N" malware installation is considered in the  MinCostMalware function    
+ 
+	    if (NbInputs &lt;=0) return NU;
+
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+
+
+        // for all "no system" inputs: we memorise potentiel B et M available attacker nodes and costs of non acceptable data submissions or (for M only) session destruction, this cost 0 for peer position and session breaking for others
+
+
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][1]!=NU) and (node.RoleParams[node.in[i].roleId][0]!=rS) ) { // reachable  and important  
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int sessDestruct=NU;
+
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+
+           if (rolCostBdM[role]!=0) {
+                    sessDestruct=ProtDestructCost(i,role,node.in[i].node_id,attack_position,attackerState);
+                    if (sessDestruct != NU) { if (rolCostBdM[role] == NU) rolCostBdM[role]=sessDestruct; else if (sessDestruct &lt; rolCostBdM[role]) rolCostBdM[role]=sessDestruct; }
+           }
+
+	 	}
+
+        // min cost of mandatory roles compromissions and count of compromisable OK roles
+        for(role : int[0,diMr-1] ) if ( node.RoleParams[role][0]!=rS and node.RoleParams[role][1]!=NU ) { //no system and no tranparent roles
+            if ( node.RoleParams[role][1]==1 ) { // mandatory role  
+                if (not rolOk[role] ) return 0; // peer Position  not available or in non F state
+                if (rolCostBdM[role]!=NU) {
+                    if ( (tcost==NU) or (rolCostBdM[role]&lt;tcost) ) tcost=rolCostBdM[role]; // minimal cost of  the compromissions of the mandatory role =&gt; tcost 
+                }            
+            } else if (node.RoleParams[role][1]==0) if (rolOk[role]) nbOKnMand++;          
+        }
+
+        if ( nbOKnMand &lt; node.actThreshold ) return 0; // not enough of non mandatory roles are active
+
+        nbtocomp=1+nbOKnMand-node.actThreshold; // number of opeional role necessary to compromise
+
+        // minimal cost of the non mandatory roles' compromission
+        for(k : int[0,diMr-1] ) {
+          int tr1=NU, j=NU;
+          //choice of a role with the minimal cost 
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBdM[role] != NU) and (tr&lt;nbtocomp) )  { //only non mandatory roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBdM[role]) )  { tr1=rolCostBdM[role]; j=role; } // role of min cost
+          }
+          if (tr1!=NU) { tr++; bdCost = (bdCost!=NU)?bdCost:0 + tr1; rolCostBdM[j]=NU; }
+        }     
+        if (tr &lt; nbtocomp) return tcost; // impossible to comproomise enough of no mandatory roles
+        if (tcost==NU) return bdCost;    // it was impossible to compromise mandatory roles  
+        return bdCost&gt;tcost?tcost:bdCost; // choice between costs of mandatory or non mandatory role compromissions 
+    }
+
+
+
+	int NoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {  // true if essential producers present on peer position or if necessary min of comm destruction by malwares!!!!
+        int NoProducerDispCost, suppl=0;
+        if (fallback and  not isFallBackActiv(node_id,sN) ) return NU;
+        if ( (not fallback) and  isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        NoProducerDispCost=minNonDispCost();
+        if (NoProducerDispCost == NU) return NU;
+        NoProducerDispCost+=suppl;
+        if ( (NoProducerDispCost+costs)&lt;= maxCosts ) return NoProducerDispCost;
+        return NU;
+	}
+	
+    void updateNoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {
+        int suppl=0;
+        int NoProducerDispCost=minNonDispCost();
+        if ( (not fallback) and isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        costs += NoProducerDispCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sN;
+    }
+
+
+	int[NU,MaxUnitCost] MinCostMalware(int[NU,nbNodes-1] node_id,int[0,NbStates-1] target_state, bool fallback) {  // malware on input or bad data et peer (partner) position  
+	    int cost=NU,tcost=NU, suppl=0;
+        if ((node.node_type==cK) and (target_state==sB)) return NU;
+        if (fallback and not isFallBackActiv(node_id,target_state) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,target_state)) suppl=node.AnomDetParam[target_state-1];
+	    if (NbInputs &lt;=0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if ( (nodeState[node.in[i].node_id].locat==sM) or ( (nodeState[node.in[i].node_id].locat==sB) and (node.in[i].attack_position==peer) )) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState);
+
+            if (tcost&gt;NU and node.RoleParams[role][2+target_state]&gt;NU) tcost+=node.RoleParams[role][2+target_state]; else tcost=NU;  // 3 cost for full malware, 4 malware BD only, 5 malware N only
+
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost =tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+        cost+=suppl;
+	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void updateMalware(int[NU,nbNodes-1] node_id, int[0,NbStates-1] target_state, bool fallback) {
+	    int[NU,MaxUnitCost] tmp=MinCostMalware(node_id,target_state, fallback);
+	    if (tmp &gt;0) costs=costs+tmp;
+	    if (not fallback) nodeState[node_id].locat=target_state;
+	}
+	
+
+	int[NU,MaxUnitCost] RemoteSecrCost(int[NU,nbNodes-1] node_id) {  // malware on inputs try to steal all locally stored secrets 
+	    int cost=NU,tcost=NU,z=0;
+	    if (NbInputs &lt;=0) return NU;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) z++;
+        if (z==0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if (nodeState[node.in[i].node_id].locat==sM) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState); //protocol access cost
+            if (tcost&gt;NU and node.RoleParams[role][6]&gt;NU) tcost+=node.RoleParams[role][6];else tcost=NU;
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost=tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+ 	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void setRemoteSecr(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] tmp=RemoteSecrCost(node_id);
+	    if (tmp &gt;0) costs=costs+tmp;
+        for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true;
+	}
+
+	
+	int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) {
+	        if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) {
+	            cost=node.secrTheftCost;
+	            if ((cost+costs)&lt;=maxCosts) return cost;
+                return NU;
+	        }
+	    };
+	    return NU;
+	}
+	
+	void setLocalSecr(int[NU,nbNodes-1] node_id){
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true; 
+	    cost=node.secrTheftCost;
+	    costs=costs+cost;
+        return;
+	}
+
+    int MinFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) return bd;
+        if (bd&lt;0) return mal;
+        if (bd&gt;mal) return mal;
+        return bd;
+    }
+    void UpdateFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) {updateBadData(node_id,fallback);return;};
+        if (bd&lt;0) {updateMalware(node_id,sB,fallback);return;};
+        if (bd&gt;mal) {updateMalware(node_id,sB,fallback);return;};
+        updateBadData(node_id,fallback);return;
+    }
+
+    int MinFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) return noProd;
+        if (noProd&lt;0) return mal;
+        if (noProd&gt;mal) return mal;
+        return noProd;
+    }
+    void UpdateFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) {updateNoProducerDisp(node_id,fallback);return;};
+        if (noProd&lt;0) {updateMalware(node_id,sN,fallback);return;};
+        if (noProd&gt;mal) {updateMalware(node_id,sN,fallback);return;};
+        updateNoProducerDisp(node_id,fallback);return;
+    }
+
+
+    int MinFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        return MinCostMalware(node_id,sM,fallback);
+    }
+    void UpdateFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        updateMalware(node_id,sM,fallback);return;
+    }
+		
+</declaration>
+		<location id="id0" x="-24157" y="-11296" color="#00ff00">
+			<name x="-24131" y="-11313">F</name>
+		</location>
+		<location id="id1" x="-24336" y="-11458" color="#ffa500">
+			<name x="-24344" y="-11441">N</name>
+		</location>
+		<location id="id2" x="-24335" y="-11220" color="#ffa500">
+			<name x="-24343" y="-11254">M</name>
+		</location>
+		<location id="id3" x="-24335" y="-11330" color="#ffa500">
+			<name x="-24335" y="-11364">B</name>
+		</location>
+		<location id="id4" x="-23808" y="-11381">
+			<name x="-23791" y="-11389">Start</name>
+		</location>
+		<location id="id5" x="-23834" y="-11143">
+			<name x="-23808" y="-11151">R</name>
+			<committed/>
+		</location>
+		<init ref="id4"/>
+		<transition id="id6">
+			<source ref="id3"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-24599" y="-11509">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24573" y="-11483">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-24599" y="-11398"/>
+			<nail x="-24599" y="-11483"/>
+			<nail x="-24361" y="-11483"/>
+		</transition>
+		<transition id="id7">
+			<source ref="id3"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-24140" y="-11066">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24140" y="-11049">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-24531" y="-11356"/>
+			<nail x="-24531" y="-11024"/>
+			<nail x="-23774" y="-11032"/>
+		</transition>
+		<transition id="id8">
+			<source ref="id3"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-24480" y="-11406">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24480" y="-11389">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24429" y="-11398"/>
+		</transition>
+		<transition id="id9">
+			<source ref="id3"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-24454" y="-11109">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24454" y="-11092">stepNb++,UpdateFM(id,true),FallBack(id,sM)</label>
+			<nail x="-24480" y="-11330"/>
+			<nail x="-24480" y="-11067"/>
+			<nail x="-23834" y="-11075"/>
+		</transition>
+		<transition id="id10">
+			<source ref="id3"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-24471" y="-11304">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24471" y="-11287">stepNb++,UpdateFM(id,false)</label>
+			<nail x="-24378" y="-11279"/>
+		</transition>
+		<transition id="id11" color="#c0c0c0">
+			<source ref="id2"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-23808" y="-11219">reset?</label>
+			<nail x="-24395" y="-11219"/>
+			<nail x="-24395" y="-11117"/>
+			<nail x="-23757" y="-11118"/>
+		</transition>
+		<transition id="id12" color="#c0c0c0">
+			<source ref="id3"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-24225" y="-11381">reset?</label>
+			<nail x="-24293" y="-11364"/>
+		</transition>
+		<transition id="id13" color="#c0c0c0">
+			<source ref="id0"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-23791" y="-11330">reset?</label>
+			<nail x="-23766" y="-11304"/>
+		</transition>
+		<transition id="id14" color="#c0c0c0">
+			<source ref="id1"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-24216" y="-11517">reset?</label>
+			<nail x="-24259" y="-11492"/>
+			<nail x="-23808" y="-11500"/>
+		</transition>
+		<transition id="id15">
+			<source ref="id0"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-24080" y="-11491">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24072" y="-11474">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-23885" y="-11475"/>
+			<nail x="-24063" y="-11475"/>
+		</transition>
+		<transition id="id16">
+			<source ref="id0"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-24089" y="-11304">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24089" y="-11287">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-23953" y="-11279"/>
+		</transition>
+		<transition id="id17">
+			<source ref="id0"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-24242" y="-11160">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24242" y="-11143">stepNb++,UpdateFM(id,true), FallBack(id,sM)</label>
+			<nail x="-24157" y="-11135"/>
+		</transition>
+		<transition id="id18" color="#c0c0c0">
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="synchronisation" x="-23851" y="-11186">reset!</label>
+		</transition>
+		<transition id="id19">
+			<source ref="id0"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-24208" y="-11228">stepNb&lt;maxSteps &amp; MinFB(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24208" y="-11211">stepNb++,UpdateFB(id,true), FallBack(id,sB)</label>
+			<nail x="-24038" y="-11177"/>
+		</transition>
+		<transition id="id20" color="#c0c0c0">
+			<source ref="id4"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-24106" y="-11407">nodeState[id].locat==sB</label>
+			<label kind="synchronisation" x="-24106" y="-11390">startCh?</label>
+			<nail x="-23902" y="-11398"/>
+		</transition>
+		<transition id="id21" color="#a9a9a9">
+			<source ref="id4"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-24089" y="-11373">nodeState[id].locat==sF</label>
+			<label kind="synchronisation" x="-24089" y="-11356">startCh?</label>
+			<nail x="-24106" y="-11347"/>
+		</transition>
+		<transition id="id22" color="#c0c0c0">
+			<source ref="id4"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-24012" y="-11432">nodeState[id].locat==sN</label>
+			<label kind="synchronisation" x="-23885" y="-11415">startCh?</label>
+			<nail x="-23876" y="-11415"/>
+		</transition>
+		<transition id="id23" color="#c0c0c0">
+			<source ref="id4"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-24072" y="-11330">nodeState[id].locat==sM</label>
+			<label kind="synchronisation" x="-23953" y="-11347">startCh?</label>
+			<nail x="-23902" y="-11347"/>
+		</transition>
+		<transition id="id24">
+			<source ref="id2"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-24403" y="-11194">stepNb&lt;maxSteps &amp; LocalVarCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24403" y="-11177">stepNb++,setLocalSecr(id)</label>
+			<nail x="-24310" y="-11160"/>
+			<nail x="-24233" y="-11202"/>
+		</transition>
+		<transition id="id25">
+			<source ref="id0"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-24311" y="-11339">stepNb&lt;maxSteps &amp; MinFB(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24311" y="-11322">stepNb++,UpdateFB(id,false)</label>
+		</transition>
+		<transition id="id26">
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-24310" y="-11449">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24310" y="-11432">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24157" y="-11458"/>
+		</transition>
+		<transition id="id27">
+			<source ref="id0"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-24327" y="-11270">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24327" y="-11253">stepNb++,UpdateFM(id,false)</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">Hackert</name>
+		<parameter>const int[0, nbNodes-1] id</parameter>
+		<declaration>// Place local declarations here.
+
+// This research has been carried out in IRT SystemX, Paris-Saclay, France, and therefore granted with public funds of the French Program “Investissements d’Avenir”.
+// This code is published under license MIT : https://spdx.org/licenses/MIT.html
+
+	const int NbInputs = 3; // per node
+	const int diM = (NbInputs&gt;0)? NbInputs : 1;
+    const int NbRoles = 3;
+    const int kernelIndex = 1;
+    const int diMr = (NbRoles&gt;0)? NbRoles : 1;
+
+    typedef struct {
+        int[NU,nbNodes-1] node_id; // input node id,  -1/NU not used
+        int[NU,2] attack_position; // peer 0 , mitm 1 == ,side 2 
+        int [0,diMr] roleId; // role id of attacked component, local id
+        bool tunnelOn; // true if tunnel on
+        int protCost[4];  // attack on protocols:  "0" session entrance cost (0 for peer), "1" break (down), tunnel compromission costs ("2" tunnel entrance, "3" tunnel break) , already adapted to the attacker position, NU for costs == impossible to break  
+    } input_t; // input description, for each interaction
+ 
+	
+	typedef struct {
+	    int[0,nbNodes-1] node_id;
+ 	    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+        int plausThreshold,actThreshold; // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB , mandatory roles no included
+	    int[NU,MaxUnitCost] secrTheftCost; // steal all the secrets stored locally, by already installed local malware 
+        int AnomDetParam[3];  // 3 costs for bypassing anomaly detection : m, b, n, if &lt;0, monitoring disabled
+        int RoleParams[diMr][7]; // role params, 7 values :  
+                                    // 0 role type: rA==app rS==system, 
+                                    // 1 importance (!= NU only for rA) Nu=='transparent' 0=='optional' 1=='mandatory',  
+                                    // 2 bad data acceptability cost, 
+                                    // 3,4,5 malware install costs :malware ,bad data only ,non available only,
+                                    // 6 cost of theft of locally stored secrets by remote malware
+	    input_t in[diM]; 
+	} node_t; // node description, for topology
+
+const int roleProtectKey[diMr][dnbVar]={
+	{false},
+	{false},
+	{false}
+};
+
+	const node_t node =
+	{1,kernel,1,0,10,{NU,NU,NU},
+		{//Roles
+			{rS,mand,NU,50,NU,50,50},
+			{rS,mand,NU,20,NU,10,10},
+			{rS,mand,NU,50,NU,50,50}
+		},
+		{//Inputs
+			{2,peer,2,false,{0,NU,NU,NU}}	/* HttpSrv	*/,
+			{3,peer,2,false,{0,NU,NU,NU}}	/* Linux	*/,
+			{4,peer,2,false,{0,NU,NU,NU}}	/* Routing	*/
+		}
+	};
+
+
+
+ 
+     bool isFallBackActiv(int[0,nbNodes-1] NodeIndex,int[0,NbStates-1] Targetlocation) {
+        return (node.AnomDetParam[Targetlocation-1] != NU) and ( fallBackMode[node.node_id][Targetlocation-1] !=NU);
+    }
+
+
+    bool key(int[0,nbNodes-1] sourceNodeIndex,int[0,nbVar-1] secrId) {
+        int idKernel=NodesKernels[sourceNodeIndex];
+        bool ret=StolenSecrets[secrId] or StoredSecrets[sourceNodeIndex][secrId];
+        if (idKernel&gt;0) ret=ret or StoredSecrets[idKernel][secrId];
+        return ret;
+    }
+
+
+    int ProtProtectCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2]; bool keyProtect=false;
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN) return NU;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+
+
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCost=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+        if (attack_position==peer) {if (keyProtect) return protCost;else return 0;} // special case for PF position, only application protocol is to consider
+        if (node.in[inpId].tunnelOn) { if (protCost==NU or tunCost==NU) return NU; else return (protCost+tunCost); } else return protCost;
+    }
+
+
+    int ProtDestructCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCostBr=node.in[inpId].protCost[1],tunCostBr=node.in[inpId].protCost[3]; bool keyProtect=false;
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2];
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN and attack_position==peer) return 0;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+ 
+
+        if (protCostBr==NU or (protCost!=NU and protCost&lt;protCostBr)) protCostBr=protCost; // normally it si easier to put down than enter, but we consider also the contray case
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCostBr=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+
+        if (attack_position==peer) {if (keyProtect) return protCostBr;else return 0;} // special case for PF position, only application protocol is to consider if key is available
+
+        if (node.in[inpId].tunnelOn) {
+            if (tunCost==NU or protCostBr==NU or ( (tunCost+protCost) &gt; tunCostBr ) ) return tunCostBr; // impossible to enter tunnel 
+            return (protCostBr+tunCostBr);
+        } else return protCostBr; // no tunel only application prooc is to consider
+    }
+
+
+	
+	bool reachable (int[0,diM-1] inp) { // true if this node can be visible by the input_node
+	if (inp ==0) return ( nodeState[1].locat != sN and  nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==1) return ( nodeState[1].locat != sN and  nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==2) return ( nodeState[1].locat != sN and  nodeState[4].locat != sN);
+	    return false;
+	} 
+
+
+    int minBadDataCost() { // returns the sum of costs for all inputs capable of producing bad data, Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBd[diMr] = {NU,NU,NU};
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers
+        
+        int bdCost=0, tcost=NU, tr=0,totRolOK=0,totRolBd=0, mustcopromise=NU, nbCompr=0,activityCost=0; // tcost total min cost        
+        int tr1=NU, j=NU;
+	    if (NbInputs &lt;=0) return NU;if (node.node_type==cK) return NU;
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of B data submissions, B cost in composed from two values, session breaking and acceptable bad data generation, sum of Ok Weight 
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=transp)) { // available inputs,  no system and important roles only
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int costDir=node.RoleParams[role][2], protCost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState), tt=NU; // costDir : cost of creation of acceptable data by role, protCost : cost of protocol break
+           if ((protCost==NU) or (costDir==NU)) tt=NU; else tt=costDir+protCost;
+           if ( (tt!=NU) and ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==peer) ) ) ) if (rolCostBd[role]==NU or rolCostBd[role]&gt;tt) rolCostBd[role]=tt; // looking for the minimal cost of roles !!!!!!!!!!!!!!!!
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+	 	}
+        // number of roles OK and potentially compromisable, compliance with mandatory roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS) { //no system roles
+            if ( node.RoleParams[role][1]==mand) {  // mandatory role
+                if ( (rolCostBd[role]&lt;=NU) and not rolOk[role] ) return NU; // impossible to compromise not active mandatory role
+                if (not rolOk[role] ) mustcopromise = (mustcopromise&gt;NU)?mustcopromise+rolCostBd[role]:rolCostBd[role]; // cost of compromission of all manadatrory and not OK roles
+                if ( (tcost==NU) or (rolCostBd[role]&lt;tcost) ) tcost=rolCostBd[role]; // minimal cost of  the compromissions of one of the mandatory role =&gt; tcost 
+            } else if ( (node.RoleParams[role][1]==0) and rolOk[role] ) totRolOK++; //number of OK optionnal roles
+        }
+
+        //if ( (totRolBmf + totRolOK) &lt; node.actThreshold ) return NU; // no enough of OK or possible to compromise  optional roles, i.e. not enough of possible active roles
+        if ( (mustcopromise&gt;NU) and (totRolOK &gt;=node.actThreshold) ) return mustcopromise;
+        
+      // adding necessary non active optional roles for minimal activity
+        nbCompr =node.actThreshold - totRolOK;
+        activityCost=0;totRolBd=0;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and not rolOk[role] )  { //only optional, no system roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; totRolBd++; activityCost += tr1; rolCostBd[j]=NU; totRolOK++;}
+        }   
+        if (nbCompr&gt;0) return NU; // impossible to have enough active optional roles
+
+       if (mustcopromise&gt;NU) return activityCost + mustcopromise; // no necessary to add supplementary optionnal role to achieve plausThreshold
+
+       // adding necessary active optional roles for input bad data
+        nbCompr =node.plausThreshold - totRolBd; // totRolBd === already compromised optional roles to maintain activity
+        bdCost=NU;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){ // for OK role only
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and rolOk[role] )  { //only optional roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; if (bdCost!=NU) bdCost += tr1; else bdCost = tr1; rolCostBd[j]=NU; }
+        }   
+
+        if ( (nbCompr&gt;0) and (tcost&lt;0) ) return NU; // not enough of bad data and impossible to compromise manadatory roles  
+        if (tcost&lt;0) {
+            if (bdCost&lt;0) return activityCost;
+            return activityCost + bdCost;
+        }
+        if (bdCost!=NU) return activityCost+(tcost&lt;bdCost)?tcost:bdCost;
+        return activityCost+tcost;       
+    }
+
+    int BadData(int[NU,nbNodes-1] node_id, bool fallback) { // fallback == true if possible fallback will be thrown
+        int badDataCost, suppl=0;
+        if (fallback and not isFallBackActiv(node_id,sB) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        badDataCost=minBadDataCost();
+        if (badDataCost == NU) return NU;
+        badDataCost+=suppl;
+        if ( (badDataCost+costs)&lt;= maxCosts ) return badDataCost;
+        return NU;
+    }
+
+    void updateBadData(int[NU,nbNodes-1] node_id, bool fallback) {
+        int badDataCost=minBadDataCost(), suppl=0;
+        if ( (not fallback) and  isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        costs += badDataCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sB;
+    }
+
+
+    int minNonDispCost() { // returns the sum of costs for all inputs able to produce Non availability state (sN), Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBdM[diMr] = {NU,NU,NU}; // 
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers, "no system roles only" are considered
+        int nbOKnMand=0, tcost=NU, nbtocomp=0;// tcost total min cost 
+        int bdCost=NU,tr=NU;
+  
+
+        // "N" malware installation is considered in the  MinCostMalware function    
+ 
+	    if (NbInputs &lt;=0) return NU;
+
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+
+
+        // for all "no system" inputs: we memorise potentiel B et M available attacker nodes and costs of non acceptable data submissions or (for M only) session destruction, this cost 0 for peer position and session breaking for others
+
+
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][1]!=NU) and (node.RoleParams[node.in[i].roleId][0]!=rS) ) { // reachable  and important  
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int sessDestruct=NU;
+
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+
+           if (rolCostBdM[role]!=0) {
+                    sessDestruct=ProtDestructCost(i,role,node.in[i].node_id,attack_position,attackerState);
+                    if (sessDestruct != NU) { if (rolCostBdM[role] == NU) rolCostBdM[role]=sessDestruct; else if (sessDestruct &lt; rolCostBdM[role]) rolCostBdM[role]=sessDestruct; }
+           }
+
+	 	}
+
+        // min cost of mandatory roles compromissions and count of compromisable OK roles
+        for(role : int[0,diMr-1] ) if ( node.RoleParams[role][0]!=rS and node.RoleParams[role][1]!=NU ) { //no system and no tranparent roles
+            if ( node.RoleParams[role][1]==1 ) { // mandatory role  
+                if (not rolOk[role] ) return 0; // peer Position  not available or in non F state
+                if (rolCostBdM[role]!=NU) {
+                    if ( (tcost==NU) or (rolCostBdM[role]&lt;tcost) ) tcost=rolCostBdM[role]; // minimal cost of  the compromissions of the mandatory role =&gt; tcost 
+                }            
+            } else if (node.RoleParams[role][1]==0) if (rolOk[role]) nbOKnMand++;          
+        }
+
+        if ( nbOKnMand &lt; node.actThreshold ) return 0; // not enough of non mandatory roles are active
+
+        nbtocomp=1+nbOKnMand-node.actThreshold; // number of opeional role necessary to compromise
+
+        // minimal cost of the non mandatory roles' compromission
+        for(k : int[0,diMr-1] ) {
+          int tr1=NU, j=NU;
+          //choice of a role with the minimal cost 
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBdM[role] != NU) and (tr&lt;nbtocomp) )  { //only non mandatory roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBdM[role]) )  { tr1=rolCostBdM[role]; j=role; } // role of min cost
+          }
+          if (tr1!=NU) { tr++; bdCost = (bdCost!=NU)?bdCost:0 + tr1; rolCostBdM[j]=NU; }
+        }     
+        if (tr &lt; nbtocomp) return tcost; // impossible to comproomise enough of no mandatory roles
+        if (tcost==NU) return bdCost;    // it was impossible to compromise mandatory roles  
+        return bdCost&gt;tcost?tcost:bdCost; // choice between costs of mandatory or non mandatory role compromissions 
+    }
+
+
+
+	int NoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {  // true if essential producers present on peer position or if necessary min of comm destruction by malwares!!!!
+        int NoProducerDispCost, suppl=0;
+        if (fallback and  not isFallBackActiv(node_id,sN) ) return NU;
+        if ( (not fallback) and  isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        NoProducerDispCost=minNonDispCost();
+        if (NoProducerDispCost == NU) return NU;
+        NoProducerDispCost+=suppl;
+        if ( (NoProducerDispCost+costs)&lt;= maxCosts ) return NoProducerDispCost;
+        return NU;
+	}
+	
+    void updateNoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {
+        int suppl=0;
+        int NoProducerDispCost=minNonDispCost();
+        if ( (not fallback) and isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        costs += NoProducerDispCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sN;
+    }
+
+
+	int[NU,MaxUnitCost] MinCostMalware(int[NU,nbNodes-1] node_id,int[0,NbStates-1] target_state, bool fallback) {  // malware on input or bad data et peer (partner) position  
+	    int cost=NU,tcost=NU, suppl=0;
+        if ((node.node_type==cK) and (target_state==sB)) return NU;
+        if (fallback and not isFallBackActiv(node_id,target_state) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,target_state)) suppl=node.AnomDetParam[target_state-1];
+	    if (NbInputs &lt;=0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if ( (nodeState[node.in[i].node_id].locat==sM) or ( (nodeState[node.in[i].node_id].locat==sB) and (node.in[i].attack_position==peer) )) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState);
+
+            if (tcost&gt;NU and node.RoleParams[role][2+target_state]&gt;NU) tcost+=node.RoleParams[role][2+target_state]; else tcost=NU;  // 3 cost for full malware, 4 malware BD only, 5 malware N only
+
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost =tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+        cost+=suppl;
+	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void updateMalware(int[NU,nbNodes-1] node_id, int[0,NbStates-1] target_state, bool fallback) {
+	    int[NU,MaxUnitCost] tmp=MinCostMalware(node_id,target_state, fallback);
+	    if (tmp &gt;0) costs=costs+tmp;
+	    if (not fallback) nodeState[node_id].locat=target_state;
+	}
+	
+
+	int[NU,MaxUnitCost] RemoteSecrCost(int[NU,nbNodes-1] node_id) {  // malware on inputs try to steal all locally stored secrets 
+	    int cost=NU,tcost=NU,z=0;
+	    if (NbInputs &lt;=0) return NU;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) z++;
+        if (z==0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if (nodeState[node.in[i].node_id].locat==sM) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState); //protocol access cost
+            if (tcost&gt;NU and node.RoleParams[role][6]&gt;NU) tcost+=node.RoleParams[role][6];else tcost=NU;
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost=tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+ 	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void setRemoteSecr(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] tmp=RemoteSecrCost(node_id);
+	    if (tmp &gt;0) costs=costs+tmp;
+        for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true;
+	}
+
+	
+	int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) {
+	        if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) {
+	            cost=node.secrTheftCost;
+	            if ((cost+costs)&lt;=maxCosts) return cost;
+                return NU;
+	        }
+	    };
+	    return NU;
+	}
+	
+	void setLocalSecr(int[NU,nbNodes-1] node_id){
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true; 
+	    cost=node.secrTheftCost;
+	    costs=costs+cost;
+        return;
+	}
+
+    int MinFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) return bd;
+        if (bd&lt;0) return mal;
+        if (bd&gt;mal) return mal;
+        return bd;
+    }
+    void UpdateFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) {updateBadData(node_id,fallback);return;};
+        if (bd&lt;0) {updateMalware(node_id,sB,fallback);return;};
+        if (bd&gt;mal) {updateMalware(node_id,sB,fallback);return;};
+        updateBadData(node_id,fallback);return;
+    }
+
+    int MinFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) return noProd;
+        if (noProd&lt;0) return mal;
+        if (noProd&gt;mal) return mal;
+        return noProd;
+    }
+    void UpdateFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) {updateNoProducerDisp(node_id,fallback);return;};
+        if (noProd&lt;0) {updateMalware(node_id,sN,fallback);return;};
+        if (noProd&gt;mal) {updateMalware(node_id,sN,fallback);return;};
+        updateNoProducerDisp(node_id,fallback);return;
+    }
+
+
+    int MinFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        return MinCostMalware(node_id,sM,fallback);
+    }
+    void UpdateFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        updateMalware(node_id,sM,fallback);return;
+    }
+		
+</declaration>
+		<location id="id28" x="-24157" y="-11296" color="#00ff00">
+			<name x="-24131" y="-11313">F</name>
+		</location>
+		<location id="id29" x="-24336" y="-11458" color="#ffa500">
+			<name x="-24344" y="-11441">N</name>
+		</location>
+		<location id="id30" x="-24335" y="-11220" color="#ffa500">
+			<name x="-24343" y="-11254">M</name>
+		</location>
+		<location id="id31" x="-24335" y="-11330" color="#ffa500">
+			<name x="-24335" y="-11364">B</name>
+		</location>
+		<location id="id32" x="-23808" y="-11381">
+			<name x="-23791" y="-11389">Start</name>
+		</location>
+		<location id="id33" x="-23834" y="-11143">
+			<name x="-23808" y="-11151">R</name>
+			<committed/>
+		</location>
+		<init ref="id32"/>
+		<transition id="id34">
+			<source ref="id31"/>
+			<target ref="id31"/>
+			<label kind="guard" x="-24599" y="-11509">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24573" y="-11483">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-24599" y="-11398"/>
+			<nail x="-24599" y="-11483"/>
+			<nail x="-24361" y="-11483"/>
+		</transition>
+		<transition id="id35">
+			<source ref="id31"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-24140" y="-11066">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24140" y="-11049">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-24531" y="-11356"/>
+			<nail x="-24531" y="-11024"/>
+			<nail x="-23774" y="-11032"/>
+		</transition>
+		<transition id="id36">
+			<source ref="id31"/>
+			<target ref="id29"/>
+			<label kind="guard" x="-24480" y="-11406">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24480" y="-11389">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24429" y="-11398"/>
+		</transition>
+		<transition id="id37">
+			<source ref="id31"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-24454" y="-11109">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24454" y="-11092">stepNb++,UpdateFM(id,true),FallBack(id,sM)</label>
+			<nail x="-24480" y="-11330"/>
+			<nail x="-24480" y="-11067"/>
+			<nail x="-23834" y="-11075"/>
+		</transition>
+		<transition id="id38">
+			<source ref="id31"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-24471" y="-11304">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24471" y="-11287">stepNb++,UpdateFM(id,false)</label>
+			<nail x="-24378" y="-11279"/>
+		</transition>
+		<transition id="id39" color="#c0c0c0">
+			<source ref="id30"/>
+			<target ref="id32"/>
+			<label kind="synchronisation" x="-23808" y="-11219">reset?</label>
+			<nail x="-24395" y="-11219"/>
+			<nail x="-24395" y="-11117"/>
+			<nail x="-23757" y="-11118"/>
+		</transition>
+		<transition id="id40" color="#c0c0c0">
+			<source ref="id31"/>
+			<target ref="id32"/>
+			<label kind="synchronisation" x="-24225" y="-11381">reset?</label>
+			<nail x="-24293" y="-11364"/>
+		</transition>
+		<transition id="id41" color="#c0c0c0">
+			<source ref="id28"/>
+			<target ref="id32"/>
+			<label kind="synchronisation" x="-23791" y="-11330">reset?</label>
+			<nail x="-23766" y="-11304"/>
+		</transition>
+		<transition id="id42" color="#c0c0c0">
+			<source ref="id29"/>
+			<target ref="id32"/>
+			<label kind="synchronisation" x="-24216" y="-11517">reset?</label>
+			<nail x="-24259" y="-11492"/>
+			<nail x="-23808" y="-11500"/>
+		</transition>
+		<transition id="id43">
+			<source ref="id28"/>
+			<target ref="id28"/>
+			<label kind="guard" x="-24080" y="-11491">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24072" y="-11474">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-23885" y="-11475"/>
+			<nail x="-24063" y="-11475"/>
+		</transition>
+		<transition id="id44">
+			<source ref="id28"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-24089" y="-11304">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24089" y="-11287">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-23953" y="-11279"/>
+		</transition>
+		<transition id="id45">
+			<source ref="id28"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-24242" y="-11160">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24242" y="-11143">stepNb++,UpdateFM(id,true), FallBack(id,sM)</label>
+			<nail x="-24157" y="-11135"/>
+		</transition>
+		<transition id="id46" color="#c0c0c0">
+			<source ref="id33"/>
+			<target ref="id32"/>
+			<label kind="synchronisation" x="-23851" y="-11186">reset!</label>
+		</transition>
+		<transition id="id47">
+			<source ref="id28"/>
+			<target ref="id33"/>
+			<label kind="guard" x="-24208" y="-11228">stepNb&lt;maxSteps &amp; MinFB(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24208" y="-11211">stepNb++,UpdateFB(id,true), FallBack(id,sB)</label>
+			<nail x="-24038" y="-11177"/>
+		</transition>
+		<transition id="id48" color="#c0c0c0">
+			<source ref="id32"/>
+			<target ref="id31"/>
+			<label kind="guard" x="-24106" y="-11407">nodeState[id].locat==sB</label>
+			<label kind="synchronisation" x="-24106" y="-11390">startCh?</label>
+			<nail x="-23902" y="-11398"/>
+		</transition>
+		<transition id="id49" color="#a9a9a9">
+			<source ref="id32"/>
+			<target ref="id28"/>
+			<label kind="guard" x="-24089" y="-11373">nodeState[id].locat==sF</label>
+			<label kind="synchronisation" x="-24089" y="-11356">startCh?</label>
+			<nail x="-24106" y="-11347"/>
+		</transition>
+		<transition id="id50" color="#c0c0c0">
+			<source ref="id32"/>
+			<target ref="id29"/>
+			<label kind="guard" x="-24012" y="-11432">nodeState[id].locat==sN</label>
+			<label kind="synchronisation" x="-23885" y="-11415">startCh?</label>
+			<nail x="-23876" y="-11415"/>
+		</transition>
+		<transition id="id51" color="#c0c0c0">
+			<source ref="id32"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-24072" y="-11330">nodeState[id].locat==sM</label>
+			<label kind="synchronisation" x="-23953" y="-11347">startCh?</label>
+			<nail x="-23902" y="-11347"/>
+		</transition>
+		<transition id="id52">
+			<source ref="id30"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-24403" y="-11194">stepNb&lt;maxSteps &amp; LocalVarCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24403" y="-11177">stepNb++,setLocalSecr(id)</label>
+			<nail x="-24310" y="-11160"/>
+			<nail x="-24233" y="-11202"/>
+		</transition>
+		<transition id="id53">
+			<source ref="id28"/>
+			<target ref="id31"/>
+			<label kind="guard" x="-24311" y="-11339">stepNb&lt;maxSteps &amp; MinFB(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24311" y="-11322">stepNb++,UpdateFB(id,false)</label>
+		</transition>
+		<transition id="id54">
+			<source ref="id28"/>
+			<target ref="id29"/>
+			<label kind="guard" x="-24310" y="-11449">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24310" y="-11432">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24157" y="-11458"/>
+		</transition>
+		<transition id="id55">
+			<source ref="id28"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-24327" y="-11270">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24327" y="-11253">stepNb++,UpdateFM(id,false)</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">HttpSrvt</name>
+		<parameter>const int[0, nbNodes-1] id</parameter>
+		<declaration>// Place local declarations here.
+
+// This research has been carried out in IRT SystemX, Paris-Saclay, France, and therefore granted with public funds of the French Program “Investissements d’Avenir”.
+// This code is published under license MIT : https://spdx.org/licenses/MIT.html
+
+	const int NbInputs = 6; // per node
+	const int diM = (NbInputs&gt;0)? NbInputs : 1;
+    const int NbRoles = 3;
+    const int kernelIndex = 3;
+    const int diMr = (NbRoles&gt;0)? NbRoles : 1;
+
+    typedef struct {
+        int[NU,nbNodes-1] node_id; // input node id,  -1/NU not used
+        int[NU,2] attack_position; // peer 0 , mitm 1 == ,side 2 
+        int [0,diMr] roleId; // role id of attacked component, local id
+        bool tunnelOn; // true if tunnel on
+        int protCost[4];  // attack on protocols:  "0" session entrance cost (0 for peer), "1" break (down), tunnel compromission costs ("2" tunnel entrance, "3" tunnel break) , already adapted to the attacker position, NU for costs == impossible to break  
+    } input_t; // input description, for each interaction
+ 
+	
+	typedef struct {
+	    int[0,nbNodes-1] node_id;
+ 	    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+        int plausThreshold,actThreshold; // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB , mandatory roles no included
+	    int[NU,MaxUnitCost] secrTheftCost; // steal all the secrets stored locally, by already installed local malware 
+        int AnomDetParam[3];  // 3 costs for bypassing anomaly detection : m, b, n, if &lt;0, monitoring disabled
+        int RoleParams[diMr][7]; // role params, 7 values :  
+                                    // 0 role type: rA==app rS==system, 
+                                    // 1 importance (!= NU only for rA) Nu=='transparent' 0=='optional' 1=='mandatory',  
+                                    // 2 bad data acceptability cost, 
+                                    // 3,4,5 malware install costs :malware ,bad data only ,non available only,
+                                    // 6 cost of theft of locally stored secrets by remote malware
+	    input_t in[diM]; 
+	} node_t; // node description, for topology
+
+const int roleProtectKey[diMr][dnbVar]={
+	{false},
+	{false},
+	{false}
+};
+
+	const node_t node =
+	{2,user,1,0,10,{NU,NU,NU},
+		{//Roles
+			{rA,transp,5,25,20,15,20},
+			{rS,mand,NU,20,10,1,10},
+			{rS,mand,NU,10,10,1,10}
+		},
+		{//Inputs
+			{0,peer,0,false,{25,0,NU,NU}}	/* Browser	*/,
+			{1,side,0,false,{25,20,NU,NU}}	/* Hacker	*/,
+			{3,mitm,0,false,{25,0,NU,NU}}	/* Linux	*/,
+			{4,mitm,0,false,{25,0,NU,NU}}	/* Routing	*/,
+			{5,mitm,0,false,{25,0,NU,NU}}	/* Windows	*/,
+			{3,peer,2,false,{0,NU,NU,NU}}	/* Linux	*/
+		}
+	};
+
+
+
+ 
+     bool isFallBackActiv(int[0,nbNodes-1] NodeIndex,int[0,NbStates-1] Targetlocation) {
+        return (node.AnomDetParam[Targetlocation-1] != NU) and ( fallBackMode[node.node_id][Targetlocation-1] !=NU);
+    }
+
+
+    bool key(int[0,nbNodes-1] sourceNodeIndex,int[0,nbVar-1] secrId) {
+        int idKernel=NodesKernels[sourceNodeIndex];
+        bool ret=StolenSecrets[secrId] or StoredSecrets[sourceNodeIndex][secrId];
+        if (idKernel&gt;0) ret=ret or StoredSecrets[idKernel][secrId];
+        return ret;
+    }
+
+
+    int ProtProtectCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2]; bool keyProtect=false;
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN) return NU;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+
+
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCost=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+        if (attack_position==peer) {if (keyProtect) return protCost;else return 0;} // special case for PF position, only application protocol is to consider
+        if (node.in[inpId].tunnelOn) { if (protCost==NU or tunCost==NU) return NU; else return (protCost+tunCost); } else return protCost;
+    }
+
+
+    int ProtDestructCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCostBr=node.in[inpId].protCost[1],tunCostBr=node.in[inpId].protCost[3]; bool keyProtect=false;
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2];
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN and attack_position==peer) return 0;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+ 
+
+        if (protCostBr==NU or (protCost!=NU and protCost&lt;protCostBr)) protCostBr=protCost; // normally it si easier to put down than enter, but we consider also the contray case
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCostBr=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+
+        if (attack_position==peer) {if (keyProtect) return protCostBr;else return 0;} // special case for PF position, only application protocol is to consider if key is available
+
+        if (node.in[inpId].tunnelOn) {
+            if (tunCost==NU or protCostBr==NU or ( (tunCost+protCost) &gt; tunCostBr ) ) return tunCostBr; // impossible to enter tunnel 
+            return (protCostBr+tunCostBr);
+        } else return protCostBr; // no tunel only application prooc is to consider
+    }
+
+
+	
+	bool reachable (int[0,diM-1] inp) { // true if this node can be visible by the input_node
+	if (inp ==0) return ( nodeState[3].locat != sN and  nodeState[4].locat != sN and  nodeState[5].locat != sN);
+	if (inp ==1) return ( nodeState[3].locat != sN and  nodeState[4].locat != sN and  nodeState[1].locat != sN);
+	if (inp ==2) return ( nodeState[3].locat != sN);
+	if (inp ==3) return ( nodeState[3].locat != sN and  nodeState[4].locat != sN);
+	if (inp ==4) return ( nodeState[3].locat != sN and  nodeState[4].locat != sN and  nodeState[5].locat != sN);
+	if (inp ==5) return ( nodeState[3].locat != sN);
+	    return false;
+	} 
+
+
+    int minBadDataCost() { // returns the sum of costs for all inputs capable of producing bad data, Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBd[diMr] = {NU,NU,NU};
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers
+        
+        int bdCost=0, tcost=NU, tr=0,totRolOK=0,totRolBd=0, mustcopromise=NU, nbCompr=0,activityCost=0; // tcost total min cost        
+        int tr1=NU, j=NU;
+	    if (NbInputs &lt;=0) return NU;if (node.node_type==cK) return NU;
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of B data submissions, B cost in composed from two values, session breaking and acceptable bad data generation, sum of Ok Weight 
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=transp)) { // available inputs,  no system and important roles only
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int costDir=node.RoleParams[role][2], protCost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState), tt=NU; // costDir : cost of creation of acceptable data by role, protCost : cost of protocol break
+           if ((protCost==NU) or (costDir==NU)) tt=NU; else tt=costDir+protCost;
+           if ( (tt!=NU) and ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==peer) ) ) ) if (rolCostBd[role]==NU or rolCostBd[role]&gt;tt) rolCostBd[role]=tt; // looking for the minimal cost of roles !!!!!!!!!!!!!!!!
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+	 	}
+        // number of roles OK and potentially compromisable, compliance with mandatory roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS) { //no system roles
+            if ( node.RoleParams[role][1]==mand) {  // mandatory role
+                if ( (rolCostBd[role]&lt;=NU) and not rolOk[role] ) return NU; // impossible to compromise not active mandatory role
+                if (not rolOk[role] ) mustcopromise = (mustcopromise&gt;NU)?mustcopromise+rolCostBd[role]:rolCostBd[role]; // cost of compromission of all manadatrory and not OK roles
+                if ( (tcost==NU) or (rolCostBd[role]&lt;tcost) ) tcost=rolCostBd[role]; // minimal cost of  the compromissions of one of the mandatory role =&gt; tcost 
+            } else if ( (node.RoleParams[role][1]==0) and rolOk[role] ) totRolOK++; //number of OK optionnal roles
+        }
+
+        //if ( (totRolBmf + totRolOK) &lt; node.actThreshold ) return NU; // no enough of OK or possible to compromise  optional roles, i.e. not enough of possible active roles
+        if ( (mustcopromise&gt;NU) and (totRolOK &gt;=node.actThreshold) ) return mustcopromise;
+        
+      // adding necessary non active optional roles for minimal activity
+        nbCompr =node.actThreshold - totRolOK;
+        activityCost=0;totRolBd=0;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and not rolOk[role] )  { //only optional, no system roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; totRolBd++; activityCost += tr1; rolCostBd[j]=NU; totRolOK++;}
+        }   
+        if (nbCompr&gt;0) return NU; // impossible to have enough active optional roles
+
+       if (mustcopromise&gt;NU) return activityCost + mustcopromise; // no necessary to add supplementary optionnal role to achieve plausThreshold
+
+       // adding necessary active optional roles for input bad data
+        nbCompr =node.plausThreshold - totRolBd; // totRolBd === already compromised optional roles to maintain activity
+        bdCost=NU;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){ // for OK role only
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and rolOk[role] )  { //only optional roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; if (bdCost!=NU) bdCost += tr1; else bdCost = tr1; rolCostBd[j]=NU; }
+        }   
+
+        if ( (nbCompr&gt;0) and (tcost&lt;0) ) return NU; // not enough of bad data and impossible to compromise manadatory roles  
+        if (tcost&lt;0) {
+            if (bdCost&lt;0) return activityCost;
+            return activityCost + bdCost;
+        }
+        if (bdCost!=NU) return activityCost+(tcost&lt;bdCost)?tcost:bdCost;
+        return activityCost+tcost;       
+    }
+
+    int BadData(int[NU,nbNodes-1] node_id, bool fallback) { // fallback == true if possible fallback will be thrown
+        int badDataCost, suppl=0;
+        if (fallback and not isFallBackActiv(node_id,sB) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        badDataCost=minBadDataCost();
+        if (badDataCost == NU) return NU;
+        badDataCost+=suppl;
+        if ( (badDataCost+costs)&lt;= maxCosts ) return badDataCost;
+        return NU;
+    }
+
+    void updateBadData(int[NU,nbNodes-1] node_id, bool fallback) {
+        int badDataCost=minBadDataCost(), suppl=0;
+        if ( (not fallback) and  isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        costs += badDataCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sB;
+    }
+
+
+    int minNonDispCost() { // returns the sum of costs for all inputs able to produce Non availability state (sN), Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBdM[diMr] = {NU,NU,NU}; // 
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers, "no system roles only" are considered
+        int nbOKnMand=0, tcost=NU, nbtocomp=0;// tcost total min cost 
+        int bdCost=NU,tr=NU;
+  
+
+        // "N" malware installation is considered in the  MinCostMalware function    
+ 
+	    if (NbInputs &lt;=0) return NU;
+
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+
+
+        // for all "no system" inputs: we memorise potentiel B et M available attacker nodes and costs of non acceptable data submissions or (for M only) session destruction, this cost 0 for peer position and session breaking for others
+
+
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][1]!=NU) and (node.RoleParams[node.in[i].roleId][0]!=rS) ) { // reachable  and important  
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int sessDestruct=NU;
+
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+
+           if (rolCostBdM[role]!=0) {
+                    sessDestruct=ProtDestructCost(i,role,node.in[i].node_id,attack_position,attackerState);
+                    if (sessDestruct != NU) { if (rolCostBdM[role] == NU) rolCostBdM[role]=sessDestruct; else if (sessDestruct &lt; rolCostBdM[role]) rolCostBdM[role]=sessDestruct; }
+           }
+
+	 	}
+
+        // min cost of mandatory roles compromissions and count of compromisable OK roles
+        for(role : int[0,diMr-1] ) if ( node.RoleParams[role][0]!=rS and node.RoleParams[role][1]!=NU ) { //no system and no tranparent roles
+            if ( node.RoleParams[role][1]==1 ) { // mandatory role  
+                if (not rolOk[role] ) return 0; // peer Position  not available or in non F state
+                if (rolCostBdM[role]!=NU) {
+                    if ( (tcost==NU) or (rolCostBdM[role]&lt;tcost) ) tcost=rolCostBdM[role]; // minimal cost of  the compromissions of the mandatory role =&gt; tcost 
+                }            
+            } else if (node.RoleParams[role][1]==0) if (rolOk[role]) nbOKnMand++;          
+        }
+
+        if ( nbOKnMand &lt; node.actThreshold ) return 0; // not enough of non mandatory roles are active
+
+        nbtocomp=1+nbOKnMand-node.actThreshold; // number of opeional role necessary to compromise
+
+        // minimal cost of the non mandatory roles' compromission
+        for(k : int[0,diMr-1] ) {
+          int tr1=NU, j=NU;
+          //choice of a role with the minimal cost 
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBdM[role] != NU) and (tr&lt;nbtocomp) )  { //only non mandatory roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBdM[role]) )  { tr1=rolCostBdM[role]; j=role; } // role of min cost
+          }
+          if (tr1!=NU) { tr++; bdCost = (bdCost!=NU)?bdCost:0 + tr1; rolCostBdM[j]=NU; }
+        }     
+        if (tr &lt; nbtocomp) return tcost; // impossible to comproomise enough of no mandatory roles
+        if (tcost==NU) return bdCost;    // it was impossible to compromise mandatory roles  
+        return bdCost&gt;tcost?tcost:bdCost; // choice between costs of mandatory or non mandatory role compromissions 
+    }
+
+
+
+	int NoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {  // true if essential producers present on peer position or if necessary min of comm destruction by malwares!!!!
+        int NoProducerDispCost, suppl=0;
+        if (fallback and  not isFallBackActiv(node_id,sN) ) return NU;
+        if ( (not fallback) and  isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        NoProducerDispCost=minNonDispCost();
+        if (NoProducerDispCost == NU) return NU;
+        NoProducerDispCost+=suppl;
+        if ( (NoProducerDispCost+costs)&lt;= maxCosts ) return NoProducerDispCost;
+        return NU;
+	}
+	
+    void updateNoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {
+        int suppl=0;
+        int NoProducerDispCost=minNonDispCost();
+        if ( (not fallback) and isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        costs += NoProducerDispCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sN;
+    }
+
+
+	int[NU,MaxUnitCost] MinCostMalware(int[NU,nbNodes-1] node_id,int[0,NbStates-1] target_state, bool fallback) {  // malware on input or bad data et peer (partner) position  
+	    int cost=NU,tcost=NU, suppl=0;
+        if ((node.node_type==cK) and (target_state==sB)) return NU;
+        if (fallback and not isFallBackActiv(node_id,target_state) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,target_state)) suppl=node.AnomDetParam[target_state-1];
+	    if (NbInputs &lt;=0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if ( (nodeState[node.in[i].node_id].locat==sM) or ( (nodeState[node.in[i].node_id].locat==sB) and (node.in[i].attack_position==peer) )) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState);
+
+            if (tcost&gt;NU and node.RoleParams[role][2+target_state]&gt;NU) tcost+=node.RoleParams[role][2+target_state]; else tcost=NU;  // 3 cost for full malware, 4 malware BD only, 5 malware N only
+
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost =tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+        cost+=suppl;
+	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void updateMalware(int[NU,nbNodes-1] node_id, int[0,NbStates-1] target_state, bool fallback) {
+	    int[NU,MaxUnitCost] tmp=MinCostMalware(node_id,target_state, fallback);
+	    if (tmp &gt;0) costs=costs+tmp;
+	    if (not fallback) nodeState[node_id].locat=target_state;
+	}
+	
+
+	int[NU,MaxUnitCost] RemoteSecrCost(int[NU,nbNodes-1] node_id) {  // malware on inputs try to steal all locally stored secrets 
+	    int cost=NU,tcost=NU,z=0;
+	    if (NbInputs &lt;=0) return NU;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) z++;
+        if (z==0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if (nodeState[node.in[i].node_id].locat==sM) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState); //protocol access cost
+            if (tcost&gt;NU and node.RoleParams[role][6]&gt;NU) tcost+=node.RoleParams[role][6];else tcost=NU;
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost=tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+ 	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void setRemoteSecr(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] tmp=RemoteSecrCost(node_id);
+	    if (tmp &gt;0) costs=costs+tmp;
+        for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true;
+	}
+
+	
+	int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) {
+	        if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) {
+	            cost=node.secrTheftCost;
+	            if ((cost+costs)&lt;=maxCosts) return cost;
+                return NU;
+	        }
+	    };
+	    return NU;
+	}
+	
+	void setLocalSecr(int[NU,nbNodes-1] node_id){
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true; 
+	    cost=node.secrTheftCost;
+	    costs=costs+cost;
+        return;
+	}
+
+    int MinFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) return bd;
+        if (bd&lt;0) return mal;
+        if (bd&gt;mal) return mal;
+        return bd;
+    }
+    void UpdateFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) {updateBadData(node_id,fallback);return;};
+        if (bd&lt;0) {updateMalware(node_id,sB,fallback);return;};
+        if (bd&gt;mal) {updateMalware(node_id,sB,fallback);return;};
+        updateBadData(node_id,fallback);return;
+    }
+
+    int MinFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) return noProd;
+        if (noProd&lt;0) return mal;
+        if (noProd&gt;mal) return mal;
+        return noProd;
+    }
+    void UpdateFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) {updateNoProducerDisp(node_id,fallback);return;};
+        if (noProd&lt;0) {updateMalware(node_id,sN,fallback);return;};
+        if (noProd&gt;mal) {updateMalware(node_id,sN,fallback);return;};
+        updateNoProducerDisp(node_id,fallback);return;
+    }
+
+
+    int MinFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        return MinCostMalware(node_id,sM,fallback);
+    }
+    void UpdateFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        updateMalware(node_id,sM,fallback);return;
+    }
+		
+</declaration>
+		<location id="id56" x="-24157" y="-11296" color="#00ff00">
+			<name x="-24131" y="-11313">F</name>
+		</location>
+		<location id="id57" x="-24336" y="-11458" color="#ffa500">
+			<name x="-24344" y="-11441">N</name>
+		</location>
+		<location id="id58" x="-24335" y="-11220" color="#ffa500">
+			<name x="-24343" y="-11254">M</name>
+		</location>
+		<location id="id59" x="-24335" y="-11330" color="#ffa500">
+			<name x="-24335" y="-11364">B</name>
+		</location>
+		<location id="id60" x="-23808" y="-11381">
+			<name x="-23791" y="-11389">Start</name>
+		</location>
+		<location id="id61" x="-23834" y="-11143">
+			<name x="-23808" y="-11151">R</name>
+			<committed/>
+		</location>
+		<init ref="id60"/>
+		<transition id="id62">
+			<source ref="id59"/>
+			<target ref="id59"/>
+			<label kind="guard" x="-24599" y="-11509">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24573" y="-11483">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-24599" y="-11398"/>
+			<nail x="-24599" y="-11483"/>
+			<nail x="-24361" y="-11483"/>
+		</transition>
+		<transition id="id63">
+			<source ref="id59"/>
+			<target ref="id61"/>
+			<label kind="guard" x="-24140" y="-11066">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24140" y="-11049">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-24531" y="-11356"/>
+			<nail x="-24531" y="-11024"/>
+			<nail x="-23774" y="-11032"/>
+		</transition>
+		<transition id="id64">
+			<source ref="id59"/>
+			<target ref="id57"/>
+			<label kind="guard" x="-24480" y="-11406">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24480" y="-11389">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24429" y="-11398"/>
+		</transition>
+		<transition id="id65">
+			<source ref="id59"/>
+			<target ref="id61"/>
+			<label kind="guard" x="-24454" y="-11109">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24454" y="-11092">stepNb++,UpdateFM(id,true),FallBack(id,sM)</label>
+			<nail x="-24480" y="-11330"/>
+			<nail x="-24480" y="-11067"/>
+			<nail x="-23834" y="-11075"/>
+		</transition>
+		<transition id="id66">
+			<source ref="id59"/>
+			<target ref="id58"/>
+			<label kind="guard" x="-24471" y="-11304">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24471" y="-11287">stepNb++,UpdateFM(id,false)</label>
+			<nail x="-24378" y="-11279"/>
+		</transition>
+		<transition id="id67" color="#c0c0c0">
+			<source ref="id58"/>
+			<target ref="id60"/>
+			<label kind="synchronisation" x="-23808" y="-11219">reset?</label>
+			<nail x="-24395" y="-11219"/>
+			<nail x="-24395" y="-11117"/>
+			<nail x="-23757" y="-11118"/>
+		</transition>
+		<transition id="id68" color="#c0c0c0">
+			<source ref="id59"/>
+			<target ref="id60"/>
+			<label kind="synchronisation" x="-24225" y="-11381">reset?</label>
+			<nail x="-24293" y="-11364"/>
+		</transition>
+		<transition id="id69" color="#c0c0c0">
+			<source ref="id56"/>
+			<target ref="id60"/>
+			<label kind="synchronisation" x="-23791" y="-11330">reset?</label>
+			<nail x="-23766" y="-11304"/>
+		</transition>
+		<transition id="id70" color="#c0c0c0">
+			<source ref="id57"/>
+			<target ref="id60"/>
+			<label kind="synchronisation" x="-24216" y="-11517">reset?</label>
+			<nail x="-24259" y="-11492"/>
+			<nail x="-23808" y="-11500"/>
+		</transition>
+		<transition id="id71">
+			<source ref="id56"/>
+			<target ref="id56"/>
+			<label kind="guard" x="-24080" y="-11491">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24072" y="-11474">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-23885" y="-11475"/>
+			<nail x="-24063" y="-11475"/>
+		</transition>
+		<transition id="id72">
+			<source ref="id56"/>
+			<target ref="id61"/>
+			<label kind="guard" x="-24089" y="-11304">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24089" y="-11287">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-23953" y="-11279"/>
+		</transition>
+		<transition id="id73">
+			<source ref="id56"/>
+			<target ref="id61"/>
+			<label kind="guard" x="-24242" y="-11160">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24242" y="-11143">stepNb++,UpdateFM(id,true), FallBack(id,sM)</label>
+			<nail x="-24157" y="-11135"/>
+		</transition>
+		<transition id="id74" color="#c0c0c0">
+			<source ref="id61"/>
+			<target ref="id60"/>
+			<label kind="synchronisation" x="-23851" y="-11186">reset!</label>
+		</transition>
+		<transition id="id75">
+			<source ref="id56"/>
+			<target ref="id61"/>
+			<label kind="guard" x="-24208" y="-11228">stepNb&lt;maxSteps &amp; MinFB(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24208" y="-11211">stepNb++,UpdateFB(id,true), FallBack(id,sB)</label>
+			<nail x="-24038" y="-11177"/>
+		</transition>
+		<transition id="id76" color="#c0c0c0">
+			<source ref="id60"/>
+			<target ref="id59"/>
+			<label kind="guard" x="-24106" y="-11407">nodeState[id].locat==sB</label>
+			<label kind="synchronisation" x="-24106" y="-11390">startCh?</label>
+			<nail x="-23902" y="-11398"/>
+		</transition>
+		<transition id="id77" color="#a9a9a9">
+			<source ref="id60"/>
+			<target ref="id56"/>
+			<label kind="guard" x="-24089" y="-11373">nodeState[id].locat==sF</label>
+			<label kind="synchronisation" x="-24089" y="-11356">startCh?</label>
+			<nail x="-24106" y="-11347"/>
+		</transition>
+		<transition id="id78" color="#c0c0c0">
+			<source ref="id60"/>
+			<target ref="id57"/>
+			<label kind="guard" x="-24012" y="-11432">nodeState[id].locat==sN</label>
+			<label kind="synchronisation" x="-23885" y="-11415">startCh?</label>
+			<nail x="-23876" y="-11415"/>
+		</transition>
+		<transition id="id79" color="#c0c0c0">
+			<source ref="id60"/>
+			<target ref="id58"/>
+			<label kind="guard" x="-24072" y="-11330">nodeState[id].locat==sM</label>
+			<label kind="synchronisation" x="-23953" y="-11347">startCh?</label>
+			<nail x="-23902" y="-11347"/>
+		</transition>
+		<transition id="id80">
+			<source ref="id58"/>
+			<target ref="id58"/>
+			<label kind="guard" x="-24403" y="-11194">stepNb&lt;maxSteps &amp; LocalVarCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24403" y="-11177">stepNb++,setLocalSecr(id)</label>
+			<nail x="-24310" y="-11160"/>
+			<nail x="-24233" y="-11202"/>
+		</transition>
+		<transition id="id81">
+			<source ref="id56"/>
+			<target ref="id59"/>
+			<label kind="guard" x="-24311" y="-11339">stepNb&lt;maxSteps &amp; MinFB(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24311" y="-11322">stepNb++,UpdateFB(id,false)</label>
+		</transition>
+		<transition id="id82">
+			<source ref="id56"/>
+			<target ref="id57"/>
+			<label kind="guard" x="-24310" y="-11449">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24310" y="-11432">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24157" y="-11458"/>
+		</transition>
+		<transition id="id83">
+			<source ref="id56"/>
+			<target ref="id58"/>
+			<label kind="guard" x="-24327" y="-11270">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24327" y="-11253">stepNb++,UpdateFM(id,false)</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">Linuxt</name>
+		<parameter>const int[0, nbNodes-1] id</parameter>
+		<declaration>// Place local declarations here.
+
+// This research has been carried out in IRT SystemX, Paris-Saclay, France, and therefore granted with public funds of the French Program “Investissements d’Avenir”.
+// This code is published under license MIT : https://spdx.org/licenses/MIT.html
+
+	const int NbInputs = 2; // per node
+	const int diM = (NbInputs&gt;0)? NbInputs : 1;
+    const int NbRoles = 3;
+    const int kernelIndex = 3;
+    const int diMr = (NbRoles&gt;0)? NbRoles : 1;
+
+    typedef struct {
+        int[NU,nbNodes-1] node_id; // input node id,  -1/NU not used
+        int[NU,2] attack_position; // peer 0 , mitm 1 == ,side 2 
+        int [0,diMr] roleId; // role id of attacked component, local id
+        bool tunnelOn; // true if tunnel on
+        int protCost[4];  // attack on protocols:  "0" session entrance cost (0 for peer), "1" break (down), tunnel compromission costs ("2" tunnel entrance, "3" tunnel break) , already adapted to the attacker position, NU for costs == impossible to break  
+    } input_t; // input description, for each interaction
+ 
+	
+	typedef struct {
+	    int[0,nbNodes-1] node_id;
+ 	    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+        int plausThreshold,actThreshold; // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB , mandatory roles no included
+	    int[NU,MaxUnitCost] secrTheftCost; // steal all the secrets stored locally, by already installed local malware 
+        int AnomDetParam[3];  // 3 costs for bypassing anomaly detection : m, b, n, if &lt;0, monitoring disabled
+        int RoleParams[diMr][7]; // role params, 7 values :  
+                                    // 0 role type: rA==app rS==system, 
+                                    // 1 importance (!= NU only for rA) Nu=='transparent' 0=='optional' 1=='mandatory',  
+                                    // 2 bad data acceptability cost, 
+                                    // 3,4,5 malware install costs :malware ,bad data only ,non available only,
+                                    // 6 cost of theft of locally stored secrets by remote malware
+	    input_t in[diM]; 
+	} node_t; // node description, for topology
+
+const int roleProtectKey[diMr][dnbVar]={
+	{false},
+	{false},
+	{false}
+};
+
+	const node_t node =
+	{3,kernel,1,0,10,{NU,NU,NU},
+		{//Roles
+			{rS,mand,NU,50,NU,50,50},
+			{rS,mand,NU,20,NU,10,10},
+			{rS,mand,NU,50,NU,50,50}
+		},
+		{//Inputs
+			{4,peer,2,false,{0,NU,NU,NU}}	/* Routing	*/,
+			{2,peer,0,false,{0,NU,NU,NU}}	/* HttpSrv	*/
+		}
+	};
+
+
+
+ 
+     bool isFallBackActiv(int[0,nbNodes-1] NodeIndex,int[0,NbStates-1] Targetlocation) {
+        return (node.AnomDetParam[Targetlocation-1] != NU) and ( fallBackMode[node.node_id][Targetlocation-1] !=NU);
+    }
+
+
+    bool key(int[0,nbNodes-1] sourceNodeIndex,int[0,nbVar-1] secrId) {
+        int idKernel=NodesKernels[sourceNodeIndex];
+        bool ret=StolenSecrets[secrId] or StoredSecrets[sourceNodeIndex][secrId];
+        if (idKernel&gt;0) ret=ret or StoredSecrets[idKernel][secrId];
+        return ret;
+    }
+
+
+    int ProtProtectCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2]; bool keyProtect=false;
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN) return NU;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+
+
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCost=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+        if (attack_position==peer) {if (keyProtect) return protCost;else return 0;} // special case for PF position, only application protocol is to consider
+        if (node.in[inpId].tunnelOn) { if (protCost==NU or tunCost==NU) return NU; else return (protCost+tunCost); } else return protCost;
+    }
+
+
+    int ProtDestructCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCostBr=node.in[inpId].protCost[1],tunCostBr=node.in[inpId].protCost[3]; bool keyProtect=false;
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2];
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN and attack_position==peer) return 0;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+ 
+
+        if (protCostBr==NU or (protCost!=NU and protCost&lt;protCostBr)) protCostBr=protCost; // normally it si easier to put down than enter, but we consider also the contray case
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCostBr=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+
+        if (attack_position==peer) {if (keyProtect) return protCostBr;else return 0;} // special case for PF position, only application protocol is to consider if key is available
+
+        if (node.in[inpId].tunnelOn) {
+            if (tunCost==NU or protCostBr==NU or ( (tunCost+protCost) &gt; tunCostBr ) ) return tunCostBr; // impossible to enter tunnel 
+            return (protCostBr+tunCostBr);
+        } else return protCostBr; // no tunel only application prooc is to consider
+    }
+
+
+	
+	bool reachable (int[0,diM-1] inp) { // true if this node can be visible by the input_node
+	if (inp ==0) return ( nodeState[3].locat != sN and  nodeState[4].locat != sN);
+	if (inp ==1) return ( nodeState[3].locat != sN);
+	    return false;
+	} 
+
+
+    int minBadDataCost() { // returns the sum of costs for all inputs capable of producing bad data, Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBd[diMr] = {NU,NU,NU};
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers
+        
+        int bdCost=0, tcost=NU, tr=0,totRolOK=0,totRolBd=0, mustcopromise=NU, nbCompr=0,activityCost=0; // tcost total min cost        
+        int tr1=NU, j=NU;
+	    if (NbInputs &lt;=0) return NU;if (node.node_type==cK) return NU;
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of B data submissions, B cost in composed from two values, session breaking and acceptable bad data generation, sum of Ok Weight 
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=transp)) { // available inputs,  no system and important roles only
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int costDir=node.RoleParams[role][2], protCost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState), tt=NU; // costDir : cost of creation of acceptable data by role, protCost : cost of protocol break
+           if ((protCost==NU) or (costDir==NU)) tt=NU; else tt=costDir+protCost;
+           if ( (tt!=NU) and ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==peer) ) ) ) if (rolCostBd[role]==NU or rolCostBd[role]&gt;tt) rolCostBd[role]=tt; // looking for the minimal cost of roles !!!!!!!!!!!!!!!!
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+	 	}
+        // number of roles OK and potentially compromisable, compliance with mandatory roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS) { //no system roles
+            if ( node.RoleParams[role][1]==mand) {  // mandatory role
+                if ( (rolCostBd[role]&lt;=NU) and not rolOk[role] ) return NU; // impossible to compromise not active mandatory role
+                if (not rolOk[role] ) mustcopromise = (mustcopromise&gt;NU)?mustcopromise+rolCostBd[role]:rolCostBd[role]; // cost of compromission of all manadatrory and not OK roles
+                if ( (tcost==NU) or (rolCostBd[role]&lt;tcost) ) tcost=rolCostBd[role]; // minimal cost of  the compromissions of one of the mandatory role =&gt; tcost 
+            } else if ( (node.RoleParams[role][1]==0) and rolOk[role] ) totRolOK++; //number of OK optionnal roles
+        }
+
+        //if ( (totRolBmf + totRolOK) &lt; node.actThreshold ) return NU; // no enough of OK or possible to compromise  optional roles, i.e. not enough of possible active roles
+        if ( (mustcopromise&gt;NU) and (totRolOK &gt;=node.actThreshold) ) return mustcopromise;
+        
+      // adding necessary non active optional roles for minimal activity
+        nbCompr =node.actThreshold - totRolOK;
+        activityCost=0;totRolBd=0;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and not rolOk[role] )  { //only optional, no system roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; totRolBd++; activityCost += tr1; rolCostBd[j]=NU; totRolOK++;}
+        }   
+        if (nbCompr&gt;0) return NU; // impossible to have enough active optional roles
+
+       if (mustcopromise&gt;NU) return activityCost + mustcopromise; // no necessary to add supplementary optionnal role to achieve plausThreshold
+
+       // adding necessary active optional roles for input bad data
+        nbCompr =node.plausThreshold - totRolBd; // totRolBd === already compromised optional roles to maintain activity
+        bdCost=NU;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){ // for OK role only
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and rolOk[role] )  { //only optional roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; if (bdCost!=NU) bdCost += tr1; else bdCost = tr1; rolCostBd[j]=NU; }
+        }   
+
+        if ( (nbCompr&gt;0) and (tcost&lt;0) ) return NU; // not enough of bad data and impossible to compromise manadatory roles  
+        if (tcost&lt;0) {
+            if (bdCost&lt;0) return activityCost;
+            return activityCost + bdCost;
+        }
+        if (bdCost!=NU) return activityCost+(tcost&lt;bdCost)?tcost:bdCost;
+        return activityCost+tcost;       
+    }
+
+    int BadData(int[NU,nbNodes-1] node_id, bool fallback) { // fallback == true if possible fallback will be thrown
+        int badDataCost, suppl=0;
+        if (fallback and not isFallBackActiv(node_id,sB) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        badDataCost=minBadDataCost();
+        if (badDataCost == NU) return NU;
+        badDataCost+=suppl;
+        if ( (badDataCost+costs)&lt;= maxCosts ) return badDataCost;
+        return NU;
+    }
+
+    void updateBadData(int[NU,nbNodes-1] node_id, bool fallback) {
+        int badDataCost=minBadDataCost(), suppl=0;
+        if ( (not fallback) and  isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        costs += badDataCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sB;
+    }
+
+
+    int minNonDispCost() { // returns the sum of costs for all inputs able to produce Non availability state (sN), Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBdM[diMr] = {NU,NU,NU}; // 
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers, "no system roles only" are considered
+        int nbOKnMand=0, tcost=NU, nbtocomp=0;// tcost total min cost 
+        int bdCost=NU,tr=NU;
+  
+
+        // "N" malware installation is considered in the  MinCostMalware function    
+ 
+	    if (NbInputs &lt;=0) return NU;
+
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+
+
+        // for all "no system" inputs: we memorise potentiel B et M available attacker nodes and costs of non acceptable data submissions or (for M only) session destruction, this cost 0 for peer position and session breaking for others
+
+
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][1]!=NU) and (node.RoleParams[node.in[i].roleId][0]!=rS) ) { // reachable  and important  
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int sessDestruct=NU;
+
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+
+           if (rolCostBdM[role]!=0) {
+                    sessDestruct=ProtDestructCost(i,role,node.in[i].node_id,attack_position,attackerState);
+                    if (sessDestruct != NU) { if (rolCostBdM[role] == NU) rolCostBdM[role]=sessDestruct; else if (sessDestruct &lt; rolCostBdM[role]) rolCostBdM[role]=sessDestruct; }
+           }
+
+	 	}
+
+        // min cost of mandatory roles compromissions and count of compromisable OK roles
+        for(role : int[0,diMr-1] ) if ( node.RoleParams[role][0]!=rS and node.RoleParams[role][1]!=NU ) { //no system and no tranparent roles
+            if ( node.RoleParams[role][1]==1 ) { // mandatory role  
+                if (not rolOk[role] ) return 0; // peer Position  not available or in non F state
+                if (rolCostBdM[role]!=NU) {
+                    if ( (tcost==NU) or (rolCostBdM[role]&lt;tcost) ) tcost=rolCostBdM[role]; // minimal cost of  the compromissions of the mandatory role =&gt; tcost 
+                }            
+            } else if (node.RoleParams[role][1]==0) if (rolOk[role]) nbOKnMand++;          
+        }
+
+        if ( nbOKnMand &lt; node.actThreshold ) return 0; // not enough of non mandatory roles are active
+
+        nbtocomp=1+nbOKnMand-node.actThreshold; // number of opeional role necessary to compromise
+
+        // minimal cost of the non mandatory roles' compromission
+        for(k : int[0,diMr-1] ) {
+          int tr1=NU, j=NU;
+          //choice of a role with the minimal cost 
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBdM[role] != NU) and (tr&lt;nbtocomp) )  { //only non mandatory roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBdM[role]) )  { tr1=rolCostBdM[role]; j=role; } // role of min cost
+          }
+          if (tr1!=NU) { tr++; bdCost = (bdCost!=NU)?bdCost:0 + tr1; rolCostBdM[j]=NU; }
+        }     
+        if (tr &lt; nbtocomp) return tcost; // impossible to comproomise enough of no mandatory roles
+        if (tcost==NU) return bdCost;    // it was impossible to compromise mandatory roles  
+        return bdCost&gt;tcost?tcost:bdCost; // choice between costs of mandatory or non mandatory role compromissions 
+    }
+
+
+
+	int NoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {  // true if essential producers present on peer position or if necessary min of comm destruction by malwares!!!!
+        int NoProducerDispCost, suppl=0;
+        if (fallback and  not isFallBackActiv(node_id,sN) ) return NU;
+        if ( (not fallback) and  isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        NoProducerDispCost=minNonDispCost();
+        if (NoProducerDispCost == NU) return NU;
+        NoProducerDispCost+=suppl;
+        if ( (NoProducerDispCost+costs)&lt;= maxCosts ) return NoProducerDispCost;
+        return NU;
+	}
+	
+    void updateNoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {
+        int suppl=0;
+        int NoProducerDispCost=minNonDispCost();
+        if ( (not fallback) and isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        costs += NoProducerDispCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sN;
+    }
+
+
+	int[NU,MaxUnitCost] MinCostMalware(int[NU,nbNodes-1] node_id,int[0,NbStates-1] target_state, bool fallback) {  // malware on input or bad data et peer (partner) position  
+	    int cost=NU,tcost=NU, suppl=0;
+        if ((node.node_type==cK) and (target_state==sB)) return NU;
+        if (fallback and not isFallBackActiv(node_id,target_state) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,target_state)) suppl=node.AnomDetParam[target_state-1];
+	    if (NbInputs &lt;=0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if ( (nodeState[node.in[i].node_id].locat==sM) or ( (nodeState[node.in[i].node_id].locat==sB) and (node.in[i].attack_position==peer) )) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState);
+
+            if (tcost&gt;NU and node.RoleParams[role][2+target_state]&gt;NU) tcost+=node.RoleParams[role][2+target_state]; else tcost=NU;  // 3 cost for full malware, 4 malware BD only, 5 malware N only
+
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost =tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+        cost+=suppl;
+	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void updateMalware(int[NU,nbNodes-1] node_id, int[0,NbStates-1] target_state, bool fallback) {
+	    int[NU,MaxUnitCost] tmp=MinCostMalware(node_id,target_state, fallback);
+	    if (tmp &gt;0) costs=costs+tmp;
+	    if (not fallback) nodeState[node_id].locat=target_state;
+	}
+	
+
+	int[NU,MaxUnitCost] RemoteSecrCost(int[NU,nbNodes-1] node_id) {  // malware on inputs try to steal all locally stored secrets 
+	    int cost=NU,tcost=NU,z=0;
+	    if (NbInputs &lt;=0) return NU;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) z++;
+        if (z==0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if (nodeState[node.in[i].node_id].locat==sM) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState); //protocol access cost
+            if (tcost&gt;NU and node.RoleParams[role][6]&gt;NU) tcost+=node.RoleParams[role][6];else tcost=NU;
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost=tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+ 	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void setRemoteSecr(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] tmp=RemoteSecrCost(node_id);
+	    if (tmp &gt;0) costs=costs+tmp;
+        for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true;
+	}
+
+	
+	int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) {
+	        if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) {
+	            cost=node.secrTheftCost;
+	            if ((cost+costs)&lt;=maxCosts) return cost;
+                return NU;
+	        }
+	    };
+	    return NU;
+	}
+	
+	void setLocalSecr(int[NU,nbNodes-1] node_id){
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true; 
+	    cost=node.secrTheftCost;
+	    costs=costs+cost;
+        return;
+	}
+
+    int MinFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) return bd;
+        if (bd&lt;0) return mal;
+        if (bd&gt;mal) return mal;
+        return bd;
+    }
+    void UpdateFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) {updateBadData(node_id,fallback);return;};
+        if (bd&lt;0) {updateMalware(node_id,sB,fallback);return;};
+        if (bd&gt;mal) {updateMalware(node_id,sB,fallback);return;};
+        updateBadData(node_id,fallback);return;
+    }
+
+    int MinFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) return noProd;
+        if (noProd&lt;0) return mal;
+        if (noProd&gt;mal) return mal;
+        return noProd;
+    }
+    void UpdateFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) {updateNoProducerDisp(node_id,fallback);return;};
+        if (noProd&lt;0) {updateMalware(node_id,sN,fallback);return;};
+        if (noProd&gt;mal) {updateMalware(node_id,sN,fallback);return;};
+        updateNoProducerDisp(node_id,fallback);return;
+    }
+
+
+    int MinFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        return MinCostMalware(node_id,sM,fallback);
+    }
+    void UpdateFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        updateMalware(node_id,sM,fallback);return;
+    }
+		
+</declaration>
+		<location id="id84" x="-24157" y="-11296" color="#00ff00">
+			<name x="-24131" y="-11313">F</name>
+		</location>
+		<location id="id85" x="-24336" y="-11458" color="#ffa500">
+			<name x="-24344" y="-11441">N</name>
+		</location>
+		<location id="id86" x="-24335" y="-11220" color="#ffa500">
+			<name x="-24343" y="-11254">M</name>
+		</location>
+		<location id="id87" x="-24335" y="-11330" color="#ffa500">
+			<name x="-24335" y="-11364">B</name>
+		</location>
+		<location id="id88" x="-23808" y="-11381">
+			<name x="-23791" y="-11389">Start</name>
+		</location>
+		<location id="id89" x="-23834" y="-11143">
+			<name x="-23808" y="-11151">R</name>
+			<committed/>
+		</location>
+		<init ref="id88"/>
+		<transition id="id90">
+			<source ref="id87"/>
+			<target ref="id87"/>
+			<label kind="guard" x="-24599" y="-11509">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24573" y="-11483">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-24599" y="-11398"/>
+			<nail x="-24599" y="-11483"/>
+			<nail x="-24361" y="-11483"/>
+		</transition>
+		<transition id="id91">
+			<source ref="id87"/>
+			<target ref="id89"/>
+			<label kind="guard" x="-24140" y="-11066">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24140" y="-11049">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-24531" y="-11356"/>
+			<nail x="-24531" y="-11024"/>
+			<nail x="-23774" y="-11032"/>
+		</transition>
+		<transition id="id92">
+			<source ref="id87"/>
+			<target ref="id85"/>
+			<label kind="guard" x="-24480" y="-11406">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24480" y="-11389">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24429" y="-11398"/>
+		</transition>
+		<transition id="id93">
+			<source ref="id87"/>
+			<target ref="id89"/>
+			<label kind="guard" x="-24454" y="-11109">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24454" y="-11092">stepNb++,UpdateFM(id,true),FallBack(id,sM)</label>
+			<nail x="-24480" y="-11330"/>
+			<nail x="-24480" y="-11067"/>
+			<nail x="-23834" y="-11075"/>
+		</transition>
+		<transition id="id94">
+			<source ref="id87"/>
+			<target ref="id86"/>
+			<label kind="guard" x="-24471" y="-11304">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24471" y="-11287">stepNb++,UpdateFM(id,false)</label>
+			<nail x="-24378" y="-11279"/>
+		</transition>
+		<transition id="id95" color="#c0c0c0">
+			<source ref="id86"/>
+			<target ref="id88"/>
+			<label kind="synchronisation" x="-23808" y="-11219">reset?</label>
+			<nail x="-24395" y="-11219"/>
+			<nail x="-24395" y="-11117"/>
+			<nail x="-23757" y="-11118"/>
+		</transition>
+		<transition id="id96" color="#c0c0c0">
+			<source ref="id87"/>
+			<target ref="id88"/>
+			<label kind="synchronisation" x="-24225" y="-11381">reset?</label>
+			<nail x="-24293" y="-11364"/>
+		</transition>
+		<transition id="id97" color="#c0c0c0">
+			<source ref="id84"/>
+			<target ref="id88"/>
+			<label kind="synchronisation" x="-23791" y="-11330">reset?</label>
+			<nail x="-23766" y="-11304"/>
+		</transition>
+		<transition id="id98" color="#c0c0c0">
+			<source ref="id85"/>
+			<target ref="id88"/>
+			<label kind="synchronisation" x="-24216" y="-11517">reset?</label>
+			<nail x="-24259" y="-11492"/>
+			<nail x="-23808" y="-11500"/>
+		</transition>
+		<transition id="id99">
+			<source ref="id84"/>
+			<target ref="id84"/>
+			<label kind="guard" x="-24080" y="-11491">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24072" y="-11474">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-23885" y="-11475"/>
+			<nail x="-24063" y="-11475"/>
+		</transition>
+		<transition id="id100">
+			<source ref="id84"/>
+			<target ref="id89"/>
+			<label kind="guard" x="-24089" y="-11304">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24089" y="-11287">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-23953" y="-11279"/>
+		</transition>
+		<transition id="id101">
+			<source ref="id84"/>
+			<target ref="id89"/>
+			<label kind="guard" x="-24242" y="-11160">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24242" y="-11143">stepNb++,UpdateFM(id,true), FallBack(id,sM)</label>
+			<nail x="-24157" y="-11135"/>
+		</transition>
+		<transition id="id102" color="#c0c0c0">
+			<source ref="id89"/>
+			<target ref="id88"/>
+			<label kind="synchronisation" x="-23851" y="-11186">reset!</label>
+		</transition>
+		<transition id="id103">
+			<source ref="id84"/>
+			<target ref="id89"/>
+			<label kind="guard" x="-24208" y="-11228">stepNb&lt;maxSteps &amp; MinFB(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24208" y="-11211">stepNb++,UpdateFB(id,true), FallBack(id,sB)</label>
+			<nail x="-24038" y="-11177"/>
+		</transition>
+		<transition id="id104" color="#c0c0c0">
+			<source ref="id88"/>
+			<target ref="id87"/>
+			<label kind="guard" x="-24106" y="-11407">nodeState[id].locat==sB</label>
+			<label kind="synchronisation" x="-24106" y="-11390">startCh?</label>
+			<nail x="-23902" y="-11398"/>
+		</transition>
+		<transition id="id105" color="#a9a9a9">
+			<source ref="id88"/>
+			<target ref="id84"/>
+			<label kind="guard" x="-24089" y="-11373">nodeState[id].locat==sF</label>
+			<label kind="synchronisation" x="-24089" y="-11356">startCh?</label>
+			<nail x="-24106" y="-11347"/>
+		</transition>
+		<transition id="id106" color="#c0c0c0">
+			<source ref="id88"/>
+			<target ref="id85"/>
+			<label kind="guard" x="-24012" y="-11432">nodeState[id].locat==sN</label>
+			<label kind="synchronisation" x="-23885" y="-11415">startCh?</label>
+			<nail x="-23876" y="-11415"/>
+		</transition>
+		<transition id="id107" color="#c0c0c0">
+			<source ref="id88"/>
+			<target ref="id86"/>
+			<label kind="guard" x="-24072" y="-11330">nodeState[id].locat==sM</label>
+			<label kind="synchronisation" x="-23953" y="-11347">startCh?</label>
+			<nail x="-23902" y="-11347"/>
+		</transition>
+		<transition id="id108">
+			<source ref="id86"/>
+			<target ref="id86"/>
+			<label kind="guard" x="-24403" y="-11194">stepNb&lt;maxSteps &amp; LocalVarCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24403" y="-11177">stepNb++,setLocalSecr(id)</label>
+			<nail x="-24310" y="-11160"/>
+			<nail x="-24233" y="-11202"/>
+		</transition>
+		<transition id="id109">
+			<source ref="id84"/>
+			<target ref="id87"/>
+			<label kind="guard" x="-24311" y="-11339">stepNb&lt;maxSteps &amp; MinFB(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24311" y="-11322">stepNb++,UpdateFB(id,false)</label>
+		</transition>
+		<transition id="id110">
+			<source ref="id84"/>
+			<target ref="id85"/>
+			<label kind="guard" x="-24310" y="-11449">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24310" y="-11432">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24157" y="-11458"/>
+		</transition>
+		<transition id="id111">
+			<source ref="id84"/>
+			<target ref="id86"/>
+			<label kind="guard" x="-24327" y="-11270">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24327" y="-11253">stepNb++,UpdateFM(id,false)</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">Routingt</name>
+		<parameter>const int[0, nbNodes-1] id</parameter>
+		<declaration>// Place local declarations here.
+
+// This research has been carried out in IRT SystemX, Paris-Saclay, France, and therefore granted with public funds of the French Program “Investissements d’Avenir”.
+// This code is published under license MIT : https://spdx.org/licenses/MIT.html
+
+	const int NbInputs = 5; // per node
+	const int diM = (NbInputs&gt;0)? NbInputs : 1;
+    const int NbRoles = 3;
+    const int kernelIndex = 4;
+    const int diMr = (NbRoles&gt;0)? NbRoles : 1;
+
+    typedef struct {
+        int[NU,nbNodes-1] node_id; // input node id,  -1/NU not used
+        int[NU,2] attack_position; // peer 0 , mitm 1 == ,side 2 
+        int [0,diMr] roleId; // role id of attacked component, local id
+        bool tunnelOn; // true if tunnel on
+        int protCost[4];  // attack on protocols:  "0" session entrance cost (0 for peer), "1" break (down), tunnel compromission costs ("2" tunnel entrance, "3" tunnel break) , already adapted to the attacker position, NU for costs == impossible to break  
+    } input_t; // input description, for each interaction
+ 
+	
+	typedef struct {
+	    int[0,nbNodes-1] node_id;
+ 	    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+        int plausThreshold,actThreshold; // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB , mandatory roles no included
+	    int[NU,MaxUnitCost] secrTheftCost; // steal all the secrets stored locally, by already installed local malware 
+        int AnomDetParam[3];  // 3 costs for bypassing anomaly detection : m, b, n, if &lt;0, monitoring disabled
+        int RoleParams[diMr][7]; // role params, 7 values :  
+                                    // 0 role type: rA==app rS==system, 
+                                    // 1 importance (!= NU only for rA) Nu=='transparent' 0=='optional' 1=='mandatory',  
+                                    // 2 bad data acceptability cost, 
+                                    // 3,4,5 malware install costs :malware ,bad data only ,non available only,
+                                    // 6 cost of theft of locally stored secrets by remote malware
+	    input_t in[diM]; 
+	} node_t; // node description, for topology
+
+const int roleProtectKey[diMr][dnbVar]={
+	{false},
+	{false},
+	{false}
+};
+
+	const node_t node =
+	{4,kernel,1,0,10,{NU,NU,NU},
+		{//Roles
+			{rS,mand,NU,50,NU,50,50},
+			{rS,mand,NU,20,NU,10,10},
+			{rS,mand,NU,50,NU,50,50}
+		},
+		{//Inputs
+			{0,peer,2,false,{0,NU,NU,NU}}	/* Browser	*/,
+			{1,peer,2,false,{0,NU,NU,NU}}	/* Hacker	*/,
+			{2,peer,2,false,{0,NU,NU,NU}}	/* HttpSrv	*/,
+			{3,peer,2,false,{0,NU,NU,NU}}	/* Linux	*/,
+			{5,peer,2,false,{0,NU,NU,NU}}	/* Windows	*/
+		}
+	};
+
+
+
+ 
+     bool isFallBackActiv(int[0,nbNodes-1] NodeIndex,int[0,NbStates-1] Targetlocation) {
+        return (node.AnomDetParam[Targetlocation-1] != NU) and ( fallBackMode[node.node_id][Targetlocation-1] !=NU);
+    }
+
+
+    bool key(int[0,nbNodes-1] sourceNodeIndex,int[0,nbVar-1] secrId) {
+        int idKernel=NodesKernels[sourceNodeIndex];
+        bool ret=StolenSecrets[secrId] or StoredSecrets[sourceNodeIndex][secrId];
+        if (idKernel&gt;0) ret=ret or StoredSecrets[idKernel][secrId];
+        return ret;
+    }
+
+
+    int ProtProtectCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2]; bool keyProtect=false;
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN) return NU;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+
+
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCost=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+        if (attack_position==peer) {if (keyProtect) return protCost;else return 0;} // special case for PF position, only application protocol is to consider
+        if (node.in[inpId].tunnelOn) { if (protCost==NU or tunCost==NU) return NU; else return (protCost+tunCost); } else return protCost;
+    }
+
+
+    int ProtDestructCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCostBr=node.in[inpId].protCost[1],tunCostBr=node.in[inpId].protCost[3]; bool keyProtect=false;
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2];
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN and attack_position==peer) return 0;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+ 
+
+        if (protCostBr==NU or (protCost!=NU and protCost&lt;protCostBr)) protCostBr=protCost; // normally it si easier to put down than enter, but we consider also the contray case
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCostBr=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+
+        if (attack_position==peer) {if (keyProtect) return protCostBr;else return 0;} // special case for PF position, only application protocol is to consider if key is available
+
+        if (node.in[inpId].tunnelOn) {
+            if (tunCost==NU or protCostBr==NU or ( (tunCost+protCost) &gt; tunCostBr ) ) return tunCostBr; // impossible to enter tunnel 
+            return (protCostBr+tunCostBr);
+        } else return protCostBr; // no tunel only application prooc is to consider
+    }
+
+
+	
+	bool reachable (int[0,diM-1] inp) { // true if this node can be visible by the input_node
+	if (inp ==0) return ( nodeState[4].locat != sN and  nodeState[5].locat != sN);
+	if (inp ==1) return ( nodeState[4].locat != sN and  nodeState[1].locat != sN);
+	if (inp ==2) return ( nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==3) return ( nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==4) return ( nodeState[4].locat != sN and  nodeState[5].locat != sN);
+	    return false;
+	} 
+
+
+    int minBadDataCost() { // returns the sum of costs for all inputs capable of producing bad data, Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBd[diMr] = {NU,NU,NU};
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers
+        
+        int bdCost=0, tcost=NU, tr=0,totRolOK=0,totRolBd=0, mustcopromise=NU, nbCompr=0,activityCost=0; // tcost total min cost        
+        int tr1=NU, j=NU;
+	    if (NbInputs &lt;=0) return NU;if (node.node_type==cK) return NU;
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of B data submissions, B cost in composed from two values, session breaking and acceptable bad data generation, sum of Ok Weight 
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=transp)) { // available inputs,  no system and important roles only
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int costDir=node.RoleParams[role][2], protCost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState), tt=NU; // costDir : cost of creation of acceptable data by role, protCost : cost of protocol break
+           if ((protCost==NU) or (costDir==NU)) tt=NU; else tt=costDir+protCost;
+           if ( (tt!=NU) and ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==peer) ) ) ) if (rolCostBd[role]==NU or rolCostBd[role]&gt;tt) rolCostBd[role]=tt; // looking for the minimal cost of roles !!!!!!!!!!!!!!!!
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+	 	}
+        // number of roles OK and potentially compromisable, compliance with mandatory roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS) { //no system roles
+            if ( node.RoleParams[role][1]==mand) {  // mandatory role
+                if ( (rolCostBd[role]&lt;=NU) and not rolOk[role] ) return NU; // impossible to compromise not active mandatory role
+                if (not rolOk[role] ) mustcopromise = (mustcopromise&gt;NU)?mustcopromise+rolCostBd[role]:rolCostBd[role]; // cost of compromission of all manadatrory and not OK roles
+                if ( (tcost==NU) or (rolCostBd[role]&lt;tcost) ) tcost=rolCostBd[role]; // minimal cost of  the compromissions of one of the mandatory role =&gt; tcost 
+            } else if ( (node.RoleParams[role][1]==0) and rolOk[role] ) totRolOK++; //number of OK optionnal roles
+        }
+
+        //if ( (totRolBmf + totRolOK) &lt; node.actThreshold ) return NU; // no enough of OK or possible to compromise  optional roles, i.e. not enough of possible active roles
+        if ( (mustcopromise&gt;NU) and (totRolOK &gt;=node.actThreshold) ) return mustcopromise;
+        
+      // adding necessary non active optional roles for minimal activity
+        nbCompr =node.actThreshold - totRolOK;
+        activityCost=0;totRolBd=0;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and not rolOk[role] )  { //only optional, no system roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; totRolBd++; activityCost += tr1; rolCostBd[j]=NU; totRolOK++;}
+        }   
+        if (nbCompr&gt;0) return NU; // impossible to have enough active optional roles
+
+       if (mustcopromise&gt;NU) return activityCost + mustcopromise; // no necessary to add supplementary optionnal role to achieve plausThreshold
+
+       // adding necessary active optional roles for input bad data
+        nbCompr =node.plausThreshold - totRolBd; // totRolBd === already compromised optional roles to maintain activity
+        bdCost=NU;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){ // for OK role only
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and rolOk[role] )  { //only optional roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; if (bdCost!=NU) bdCost += tr1; else bdCost = tr1; rolCostBd[j]=NU; }
+        }   
+
+        if ( (nbCompr&gt;0) and (tcost&lt;0) ) return NU; // not enough of bad data and impossible to compromise manadatory roles  
+        if (tcost&lt;0) {
+            if (bdCost&lt;0) return activityCost;
+            return activityCost + bdCost;
+        }
+        if (bdCost!=NU) return activityCost+(tcost&lt;bdCost)?tcost:bdCost;
+        return activityCost+tcost;       
+    }
+
+    int BadData(int[NU,nbNodes-1] node_id, bool fallback) { // fallback == true if possible fallback will be thrown
+        int badDataCost, suppl=0;
+        if (fallback and not isFallBackActiv(node_id,sB) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        badDataCost=minBadDataCost();
+        if (badDataCost == NU) return NU;
+        badDataCost+=suppl;
+        if ( (badDataCost+costs)&lt;= maxCosts ) return badDataCost;
+        return NU;
+    }
+
+    void updateBadData(int[NU,nbNodes-1] node_id, bool fallback) {
+        int badDataCost=minBadDataCost(), suppl=0;
+        if ( (not fallback) and  isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        costs += badDataCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sB;
+    }
+
+
+    int minNonDispCost() { // returns the sum of costs for all inputs able to produce Non availability state (sN), Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBdM[diMr] = {NU,NU,NU}; // 
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers, "no system roles only" are considered
+        int nbOKnMand=0, tcost=NU, nbtocomp=0;// tcost total min cost 
+        int bdCost=NU,tr=NU;
+  
+
+        // "N" malware installation is considered in the  MinCostMalware function    
+ 
+	    if (NbInputs &lt;=0) return NU;
+
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+
+
+        // for all "no system" inputs: we memorise potentiel B et M available attacker nodes and costs of non acceptable data submissions or (for M only) session destruction, this cost 0 for peer position and session breaking for others
+
+
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][1]!=NU) and (node.RoleParams[node.in[i].roleId][0]!=rS) ) { // reachable  and important  
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int sessDestruct=NU;
+
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+
+           if (rolCostBdM[role]!=0) {
+                    sessDestruct=ProtDestructCost(i,role,node.in[i].node_id,attack_position,attackerState);
+                    if (sessDestruct != NU) { if (rolCostBdM[role] == NU) rolCostBdM[role]=sessDestruct; else if (sessDestruct &lt; rolCostBdM[role]) rolCostBdM[role]=sessDestruct; }
+           }
+
+	 	}
+
+        // min cost of mandatory roles compromissions and count of compromisable OK roles
+        for(role : int[0,diMr-1] ) if ( node.RoleParams[role][0]!=rS and node.RoleParams[role][1]!=NU ) { //no system and no tranparent roles
+            if ( node.RoleParams[role][1]==1 ) { // mandatory role  
+                if (not rolOk[role] ) return 0; // peer Position  not available or in non F state
+                if (rolCostBdM[role]!=NU) {
+                    if ( (tcost==NU) or (rolCostBdM[role]&lt;tcost) ) tcost=rolCostBdM[role]; // minimal cost of  the compromissions of the mandatory role =&gt; tcost 
+                }            
+            } else if (node.RoleParams[role][1]==0) if (rolOk[role]) nbOKnMand++;          
+        }
+
+        if ( nbOKnMand &lt; node.actThreshold ) return 0; // not enough of non mandatory roles are active
+
+        nbtocomp=1+nbOKnMand-node.actThreshold; // number of opeional role necessary to compromise
+
+        // minimal cost of the non mandatory roles' compromission
+        for(k : int[0,diMr-1] ) {
+          int tr1=NU, j=NU;
+          //choice of a role with the minimal cost 
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBdM[role] != NU) and (tr&lt;nbtocomp) )  { //only non mandatory roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBdM[role]) )  { tr1=rolCostBdM[role]; j=role; } // role of min cost
+          }
+          if (tr1!=NU) { tr++; bdCost = (bdCost!=NU)?bdCost:0 + tr1; rolCostBdM[j]=NU; }
+        }     
+        if (tr &lt; nbtocomp) return tcost; // impossible to comproomise enough of no mandatory roles
+        if (tcost==NU) return bdCost;    // it was impossible to compromise mandatory roles  
+        return bdCost&gt;tcost?tcost:bdCost; // choice between costs of mandatory or non mandatory role compromissions 
+    }
+
+
+
+	int NoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {  // true if essential producers present on peer position or if necessary min of comm destruction by malwares!!!!
+        int NoProducerDispCost, suppl=0;
+        if (fallback and  not isFallBackActiv(node_id,sN) ) return NU;
+        if ( (not fallback) and  isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        NoProducerDispCost=minNonDispCost();
+        if (NoProducerDispCost == NU) return NU;
+        NoProducerDispCost+=suppl;
+        if ( (NoProducerDispCost+costs)&lt;= maxCosts ) return NoProducerDispCost;
+        return NU;
+	}
+	
+    void updateNoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {
+        int suppl=0;
+        int NoProducerDispCost=minNonDispCost();
+        if ( (not fallback) and isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        costs += NoProducerDispCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sN;
+    }
+
+
+	int[NU,MaxUnitCost] MinCostMalware(int[NU,nbNodes-1] node_id,int[0,NbStates-1] target_state, bool fallback) {  // malware on input or bad data et peer (partner) position  
+	    int cost=NU,tcost=NU, suppl=0;
+        if ((node.node_type==cK) and (target_state==sB)) return NU;
+        if (fallback and not isFallBackActiv(node_id,target_state) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,target_state)) suppl=node.AnomDetParam[target_state-1];
+	    if (NbInputs &lt;=0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if ( (nodeState[node.in[i].node_id].locat==sM) or ( (nodeState[node.in[i].node_id].locat==sB) and (node.in[i].attack_position==peer) )) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState);
+
+            if (tcost&gt;NU and node.RoleParams[role][2+target_state]&gt;NU) tcost+=node.RoleParams[role][2+target_state]; else tcost=NU;  // 3 cost for full malware, 4 malware BD only, 5 malware N only
+
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost =tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+        cost+=suppl;
+	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void updateMalware(int[NU,nbNodes-1] node_id, int[0,NbStates-1] target_state, bool fallback) {
+	    int[NU,MaxUnitCost] tmp=MinCostMalware(node_id,target_state, fallback);
+	    if (tmp &gt;0) costs=costs+tmp;
+	    if (not fallback) nodeState[node_id].locat=target_state;
+	}
+	
+
+	int[NU,MaxUnitCost] RemoteSecrCost(int[NU,nbNodes-1] node_id) {  // malware on inputs try to steal all locally stored secrets 
+	    int cost=NU,tcost=NU,z=0;
+	    if (NbInputs &lt;=0) return NU;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) z++;
+        if (z==0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if (nodeState[node.in[i].node_id].locat==sM) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState); //protocol access cost
+            if (tcost&gt;NU and node.RoleParams[role][6]&gt;NU) tcost+=node.RoleParams[role][6];else tcost=NU;
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost=tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+ 	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void setRemoteSecr(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] tmp=RemoteSecrCost(node_id);
+	    if (tmp &gt;0) costs=costs+tmp;
+        for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true;
+	}
+
+	
+	int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) {
+	        if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) {
+	            cost=node.secrTheftCost;
+	            if ((cost+costs)&lt;=maxCosts) return cost;
+                return NU;
+	        }
+	    };
+	    return NU;
+	}
+	
+	void setLocalSecr(int[NU,nbNodes-1] node_id){
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true; 
+	    cost=node.secrTheftCost;
+	    costs=costs+cost;
+        return;
+	}
+
+    int MinFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) return bd;
+        if (bd&lt;0) return mal;
+        if (bd&gt;mal) return mal;
+        return bd;
+    }
+    void UpdateFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) {updateBadData(node_id,fallback);return;};
+        if (bd&lt;0) {updateMalware(node_id,sB,fallback);return;};
+        if (bd&gt;mal) {updateMalware(node_id,sB,fallback);return;};
+        updateBadData(node_id,fallback);return;
+    }
+
+    int MinFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) return noProd;
+        if (noProd&lt;0) return mal;
+        if (noProd&gt;mal) return mal;
+        return noProd;
+    }
+    void UpdateFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) {updateNoProducerDisp(node_id,fallback);return;};
+        if (noProd&lt;0) {updateMalware(node_id,sN,fallback);return;};
+        if (noProd&gt;mal) {updateMalware(node_id,sN,fallback);return;};
+        updateNoProducerDisp(node_id,fallback);return;
+    }
+
+
+    int MinFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        return MinCostMalware(node_id,sM,fallback);
+    }
+    void UpdateFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        updateMalware(node_id,sM,fallback);return;
+    }
+		
+</declaration>
+		<location id="id112" x="-24157" y="-11296" color="#00ff00">
+			<name x="-24131" y="-11313">F</name>
+		</location>
+		<location id="id113" x="-24336" y="-11458" color="#ffa500">
+			<name x="-24344" y="-11441">N</name>
+		</location>
+		<location id="id114" x="-24335" y="-11220" color="#ffa500">
+			<name x="-24343" y="-11254">M</name>
+		</location>
+		<location id="id115" x="-24335" y="-11330" color="#ffa500">
+			<name x="-24335" y="-11364">B</name>
+		</location>
+		<location id="id116" x="-23808" y="-11381">
+			<name x="-23791" y="-11389">Start</name>
+		</location>
+		<location id="id117" x="-23834" y="-11143">
+			<name x="-23808" y="-11151">R</name>
+			<committed/>
+		</location>
+		<init ref="id116"/>
+		<transition id="id118">
+			<source ref="id115"/>
+			<target ref="id115"/>
+			<label kind="guard" x="-24599" y="-11509">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24573" y="-11483">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-24599" y="-11398"/>
+			<nail x="-24599" y="-11483"/>
+			<nail x="-24361" y="-11483"/>
+		</transition>
+		<transition id="id119">
+			<source ref="id115"/>
+			<target ref="id117"/>
+			<label kind="guard" x="-24140" y="-11066">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24140" y="-11049">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-24531" y="-11356"/>
+			<nail x="-24531" y="-11024"/>
+			<nail x="-23774" y="-11032"/>
+		</transition>
+		<transition id="id120">
+			<source ref="id115"/>
+			<target ref="id113"/>
+			<label kind="guard" x="-24480" y="-11406">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24480" y="-11389">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24429" y="-11398"/>
+		</transition>
+		<transition id="id121">
+			<source ref="id115"/>
+			<target ref="id117"/>
+			<label kind="guard" x="-24454" y="-11109">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24454" y="-11092">stepNb++,UpdateFM(id,true),FallBack(id,sM)</label>
+			<nail x="-24480" y="-11330"/>
+			<nail x="-24480" y="-11067"/>
+			<nail x="-23834" y="-11075"/>
+		</transition>
+		<transition id="id122">
+			<source ref="id115"/>
+			<target ref="id114"/>
+			<label kind="guard" x="-24471" y="-11304">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24471" y="-11287">stepNb++,UpdateFM(id,false)</label>
+			<nail x="-24378" y="-11279"/>
+		</transition>
+		<transition id="id123" color="#c0c0c0">
+			<source ref="id114"/>
+			<target ref="id116"/>
+			<label kind="synchronisation" x="-23808" y="-11219">reset?</label>
+			<nail x="-24395" y="-11219"/>
+			<nail x="-24395" y="-11117"/>
+			<nail x="-23757" y="-11118"/>
+		</transition>
+		<transition id="id124" color="#c0c0c0">
+			<source ref="id115"/>
+			<target ref="id116"/>
+			<label kind="synchronisation" x="-24225" y="-11381">reset?</label>
+			<nail x="-24293" y="-11364"/>
+		</transition>
+		<transition id="id125" color="#c0c0c0">
+			<source ref="id112"/>
+			<target ref="id116"/>
+			<label kind="synchronisation" x="-23791" y="-11330">reset?</label>
+			<nail x="-23766" y="-11304"/>
+		</transition>
+		<transition id="id126" color="#c0c0c0">
+			<source ref="id113"/>
+			<target ref="id116"/>
+			<label kind="synchronisation" x="-24216" y="-11517">reset?</label>
+			<nail x="-24259" y="-11492"/>
+			<nail x="-23808" y="-11500"/>
+		</transition>
+		<transition id="id127">
+			<source ref="id112"/>
+			<target ref="id112"/>
+			<label kind="guard" x="-24080" y="-11491">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24072" y="-11474">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-23885" y="-11475"/>
+			<nail x="-24063" y="-11475"/>
+		</transition>
+		<transition id="id128">
+			<source ref="id112"/>
+			<target ref="id117"/>
+			<label kind="guard" x="-24089" y="-11304">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24089" y="-11287">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-23953" y="-11279"/>
+		</transition>
+		<transition id="id129">
+			<source ref="id112"/>
+			<target ref="id117"/>
+			<label kind="guard" x="-24242" y="-11160">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24242" y="-11143">stepNb++,UpdateFM(id,true), FallBack(id,sM)</label>
+			<nail x="-24157" y="-11135"/>
+		</transition>
+		<transition id="id130" color="#c0c0c0">
+			<source ref="id117"/>
+			<target ref="id116"/>
+			<label kind="synchronisation" x="-23851" y="-11186">reset!</label>
+		</transition>
+		<transition id="id131">
+			<source ref="id112"/>
+			<target ref="id117"/>
+			<label kind="guard" x="-24208" y="-11228">stepNb&lt;maxSteps &amp; MinFB(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24208" y="-11211">stepNb++,UpdateFB(id,true), FallBack(id,sB)</label>
+			<nail x="-24038" y="-11177"/>
+		</transition>
+		<transition id="id132" color="#c0c0c0">
+			<source ref="id116"/>
+			<target ref="id115"/>
+			<label kind="guard" x="-24106" y="-11407">nodeState[id].locat==sB</label>
+			<label kind="synchronisation" x="-24106" y="-11390">startCh?</label>
+			<nail x="-23902" y="-11398"/>
+		</transition>
+		<transition id="id133" color="#a9a9a9">
+			<source ref="id116"/>
+			<target ref="id112"/>
+			<label kind="guard" x="-24089" y="-11373">nodeState[id].locat==sF</label>
+			<label kind="synchronisation" x="-24089" y="-11356">startCh?</label>
+			<nail x="-24106" y="-11347"/>
+		</transition>
+		<transition id="id134" color="#c0c0c0">
+			<source ref="id116"/>
+			<target ref="id113"/>
+			<label kind="guard" x="-24012" y="-11432">nodeState[id].locat==sN</label>
+			<label kind="synchronisation" x="-23885" y="-11415">startCh?</label>
+			<nail x="-23876" y="-11415"/>
+		</transition>
+		<transition id="id135" color="#c0c0c0">
+			<source ref="id116"/>
+			<target ref="id114"/>
+			<label kind="guard" x="-24072" y="-11330">nodeState[id].locat==sM</label>
+			<label kind="synchronisation" x="-23953" y="-11347">startCh?</label>
+			<nail x="-23902" y="-11347"/>
+		</transition>
+		<transition id="id136">
+			<source ref="id114"/>
+			<target ref="id114"/>
+			<label kind="guard" x="-24403" y="-11194">stepNb&lt;maxSteps &amp; LocalVarCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24403" y="-11177">stepNb++,setLocalSecr(id)</label>
+			<nail x="-24310" y="-11160"/>
+			<nail x="-24233" y="-11202"/>
+		</transition>
+		<transition id="id137">
+			<source ref="id112"/>
+			<target ref="id115"/>
+			<label kind="guard" x="-24311" y="-11339">stepNb&lt;maxSteps &amp; MinFB(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24311" y="-11322">stepNb++,UpdateFB(id,false)</label>
+		</transition>
+		<transition id="id138">
+			<source ref="id112"/>
+			<target ref="id113"/>
+			<label kind="guard" x="-24310" y="-11449">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24310" y="-11432">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24157" y="-11458"/>
+		</transition>
+		<transition id="id139">
+			<source ref="id112"/>
+			<target ref="id114"/>
+			<label kind="guard" x="-24327" y="-11270">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24327" y="-11253">stepNb++,UpdateFM(id,false)</label>
+		</transition>
+	</template>
+	<template>
+		<name x="5" y="5">Windowst</name>
+		<parameter>const int[0, nbNodes-1] id</parameter>
+		<declaration>// Place local declarations here.
+
+// This research has been carried out in IRT SystemX, Paris-Saclay, France, and therefore granted with public funds of the French Program “Investissements d’Avenir”.
+// This code is published under license MIT : https://spdx.org/licenses/MIT.html
+
+	const int NbInputs = 4; // per node
+	const int diM = (NbInputs&gt;0)? NbInputs : 1;
+    const int NbRoles = 3;
+    const int kernelIndex = 5;
+    const int diMr = (NbRoles&gt;0)? NbRoles : 1;
+
+    typedef struct {
+        int[NU,nbNodes-1] node_id; // input node id,  -1/NU not used
+        int[NU,2] attack_position; // peer 0 , mitm 1 == ,side 2 
+        int [0,diMr] roleId; // role id of attacked component, local id
+        bool tunnelOn; // true if tunnel on
+        int protCost[4];  // attack on protocols:  "0" session entrance cost (0 for peer), "1" break (down), tunnel compromission costs ("2" tunnel entrance, "3" tunnel break) , already adapted to the attacker position, NU for costs == impossible to break  
+    } input_t; // input description, for each interaction
+ 
+	
+	typedef struct {
+	    int[0,nbNodes-1] node_id;
+ 	    int[0, 2] node_type; // 0 == user space component , 1 == root space component, 2 == kernel
+        int plausThreshold,actThreshold; // min of Bd roles to be bad data, min of active rA roles != 'mandatory' to be sF or sB , mandatory roles no included
+	    int[NU,MaxUnitCost] secrTheftCost; // steal all the secrets stored locally, by already installed local malware 
+        int AnomDetParam[3];  // 3 costs for bypassing anomaly detection : m, b, n, if &lt;0, monitoring disabled
+        int RoleParams[diMr][7]; // role params, 7 values :  
+                                    // 0 role type: rA==app rS==system, 
+                                    // 1 importance (!= NU only for rA) Nu=='transparent' 0=='optional' 1=='mandatory',  
+                                    // 2 bad data acceptability cost, 
+                                    // 3,4,5 malware install costs :malware ,bad data only ,non available only,
+                                    // 6 cost of theft of locally stored secrets by remote malware
+	    input_t in[diM]; 
+	} node_t; // node description, for topology
+
+const int roleProtectKey[diMr][dnbVar]={
+	{false},
+	{false},
+	{false}
+};
+
+	const node_t node =
+	{5,kernel,1,0,10,{NU,NU,NU},
+		{//Roles
+			{rS,mand,NU,40,NU,40,50},
+			{rS,mand,NU,20,NU,10,10},
+			{rS,mand,NU,40,NU,40,50}
+		},
+		{//Inputs
+			{2,peer,2,false,{0,NU,NU,NU}}	/* HttpSrv	*/,
+			{3,peer,2,false,{0,NU,NU,NU}}	/* Linux	*/,
+			{4,peer,2,false,{0,NU,NU,NU}}	/* Routing	*/,
+			{0,peer,0,false,{0,NU,NU,NU}}	/* Browser	*/
+		}
+	};
+
+
+
+ 
+     bool isFallBackActiv(int[0,nbNodes-1] NodeIndex,int[0,NbStates-1] Targetlocation) {
+        return (node.AnomDetParam[Targetlocation-1] != NU) and ( fallBackMode[node.node_id][Targetlocation-1] !=NU);
+    }
+
+
+    bool key(int[0,nbNodes-1] sourceNodeIndex,int[0,nbVar-1] secrId) {
+        int idKernel=NodesKernels[sourceNodeIndex];
+        bool ret=StolenSecrets[secrId] or StoredSecrets[sourceNodeIndex][secrId];
+        if (idKernel&gt;0) ret=ret or StoredSecrets[idKernel][secrId];
+        return ret;
+    }
+
+
+    int ProtProtectCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2]; bool keyProtect=false;
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN) return NU;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+
+
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCost=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+        if (attack_position==peer) {if (keyProtect) return protCost;else return 0;} // special case for PF position, only application protocol is to consider
+        if (node.in[inpId].tunnelOn) { if (protCost==NU or tunCost==NU) return NU; else return (protCost+tunCost); } else return protCost;
+    }
+
+
+    int ProtDestructCost(int[0,diM-1] inpId, int roleId, int[0,nbNodes-1] sourceNodeIndex,int[NU,2] attack_position,int[0,NbStates-1] attackerState) { // cost of protocol session theft
+        int protCostBr=node.in[inpId].protCost[1],tunCostBr=node.in[inpId].protCost[3]; bool keyProtect=false;
+        int protCost=node.in[inpId].protCost[0],tunCost=node.in[inpId].protCost[2];
+        int kernelSId=NodesKernels[sourceNodeIndex];
+
+        if (attackerState==sF) return NU;
+        if (attackerState==sN and attack_position==peer) return 0;
+        if (attackerState!=sM and attack_position!=peer) return NU;
+ 
+
+        if (protCostBr==NU or (protCost!=NU and protCost&lt;protCostBr)) protCostBr=protCost; // normally it si easier to put down than enter, but we consider also the contray case
+        for (i : int[0,nbVar-1] ) {
+            if (roleProtectKey[roleId][i]) {
+                bool kerSt=false;if (kernelSId !=NU) kerSt=StoredSecrets[kernelSId][i];
+                keyProtect=true;if (StolenSecrets[i] or StoredSecrets[sourceNodeIndex][i] or kerSt) protCostBr=0;
+            } // application protocol is set to zero if one of the protection secret is available
+        }
+
+        if (attack_position==peer) {if (keyProtect) return protCostBr;else return 0;} // special case for PF position, only application protocol is to consider if key is available
+
+        if (node.in[inpId].tunnelOn) {
+            if (tunCost==NU or protCostBr==NU or ( (tunCost+protCost) &gt; tunCostBr ) ) return tunCostBr; // impossible to enter tunnel 
+            return (protCostBr+tunCostBr);
+        } else return protCostBr; // no tunel only application prooc is to consider
+    }
+
+
+	
+	bool reachable (int[0,diM-1] inp) { // true if this node can be visible by the input_node
+	if (inp ==0) return ( nodeState[5].locat != sN and  nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==1) return ( nodeState[5].locat != sN and  nodeState[4].locat != sN and  nodeState[3].locat != sN);
+	if (inp ==2) return ( nodeState[5].locat != sN and  nodeState[4].locat != sN);
+	if (inp ==3) return ( nodeState[5].locat != sN);
+	    return false;
+	} 
+
+
+    int minBadDataCost() { // returns the sum of costs for all inputs capable of producing bad data, Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBd[diMr] = {NU,NU,NU};
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers
+        
+        int bdCost=0, tcost=NU, tr=0,totRolOK=0,totRolBd=0, mustcopromise=NU, nbCompr=0,activityCost=0; // tcost total min cost        
+        int tr1=NU, j=NU;
+	    if (NbInputs &lt;=0) return NU;if (node.node_type==cK) return NU;
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+       // for all no system inputs: we memorise potentiel B et M available attacker nodes and costs of B data submissions, B cost in composed from two values, session breaking and acceptable bad data generation, sum of Ok Weight 
+       // first round, minimal costs  for available partners 
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][0]!=rS) and (node.RoleParams[node.in[i].roleId][1]!=transp)) { // available inputs,  no system and important roles only
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int costDir=node.RoleParams[role][2], protCost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState), tt=NU; // costDir : cost of creation of acceptable data by role, protCost : cost of protocol break
+           if ((protCost==NU) or (costDir==NU)) tt=NU; else tt=costDir+protCost;
+           if ( (tt!=NU) and ( (attackerState==sM) or ( (attackerState==sB) and (attack_position==peer) ) ) ) if (rolCostBd[role]==NU or rolCostBd[role]&gt;tt) rolCostBd[role]=tt; // looking for the minimal cost of roles !!!!!!!!!!!!!!!!
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+	 	}
+        // number of roles OK and potentially compromisable, compliance with mandatory roles
+        for(role : int[0,diMr-1] ) if (node.RoleParams[role][0]!=rS) { //no system roles
+            if ( node.RoleParams[role][1]==mand) {  // mandatory role
+                if ( (rolCostBd[role]&lt;=NU) and not rolOk[role] ) return NU; // impossible to compromise not active mandatory role
+                if (not rolOk[role] ) mustcopromise = (mustcopromise&gt;NU)?mustcopromise+rolCostBd[role]:rolCostBd[role]; // cost of compromission of all manadatrory and not OK roles
+                if ( (tcost==NU) or (rolCostBd[role]&lt;tcost) ) tcost=rolCostBd[role]; // minimal cost of  the compromissions of one of the mandatory role =&gt; tcost 
+            } else if ( (node.RoleParams[role][1]==0) and rolOk[role] ) totRolOK++; //number of OK optionnal roles
+        }
+
+        //if ( (totRolBmf + totRolOK) &lt; node.actThreshold ) return NU; // no enough of OK or possible to compromise  optional roles, i.e. not enough of possible active roles
+        if ( (mustcopromise&gt;NU) and (totRolOK &gt;=node.actThreshold) ) return mustcopromise;
+        
+      // adding necessary non active optional roles for minimal activity
+        nbCompr =node.actThreshold - totRolOK;
+        activityCost=0;totRolBd=0;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and not rolOk[role] )  { //only optional, no system roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; totRolBd++; activityCost += tr1; rolCostBd[j]=NU; totRolOK++;}
+        }   
+        if (nbCompr&gt;0) return NU; // impossible to have enough active optional roles
+
+       if (mustcopromise&gt;NU) return activityCost + mustcopromise; // no necessary to add supplementary optionnal role to achieve plausThreshold
+
+       // adding necessary active optional roles for input bad data
+        nbCompr =node.plausThreshold - totRolBd; // totRolBd === already compromised optional roles to maintain activity
+        bdCost=NU;
+        for(k : int[0,diMr-1] ) if (nbCompr&gt;0){ // for OK role only
+          tr1=NU;
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==opt) and (rolCostBd[role] &gt; NU) and rolOk[role] )  { //only optional roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBd[role]) )  { tr1=rolCostBd[role]; j=role; } // role of min cost
+          }
+          if ( tr1!=NU ) { nbCompr--; if (bdCost!=NU) bdCost += tr1; else bdCost = tr1; rolCostBd[j]=NU; }
+        }   
+
+        if ( (nbCompr&gt;0) and (tcost&lt;0) ) return NU; // not enough of bad data and impossible to compromise manadatory roles  
+        if (tcost&lt;0) {
+            if (bdCost&lt;0) return activityCost;
+            return activityCost + bdCost;
+        }
+        if (bdCost!=NU) return activityCost+(tcost&lt;bdCost)?tcost:bdCost;
+        return activityCost+tcost;       
+    }
+
+    int BadData(int[NU,nbNodes-1] node_id, bool fallback) { // fallback == true if possible fallback will be thrown
+        int badDataCost, suppl=0;
+        if (fallback and not isFallBackActiv(node_id,sB) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        badDataCost=minBadDataCost();
+        if (badDataCost == NU) return NU;
+        badDataCost+=suppl;
+        if ( (badDataCost+costs)&lt;= maxCosts ) return badDataCost;
+        return NU;
+    }
+
+    void updateBadData(int[NU,nbNodes-1] node_id, bool fallback) {
+        int badDataCost=minBadDataCost(), suppl=0;
+        if ( (not fallback) and  isFallBackActiv(node_id,sB) ) suppl=node.AnomDetParam[sB-1];
+        costs += badDataCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sB;
+    }
+
+
+    int minNonDispCost() { // returns the sum of costs for all inputs able to produce Non availability state (sN), Nu if impossible 
+        int[NU,MaxUnitCost] rolCostBdM[diMr] = {NU,NU,NU}; // 
+        bool rolOk[diMr] = {false,false,false};  // true if a role can stay OK thanks to legitimate producers, "no system roles only" are considered
+        int nbOKnMand=0, tcost=NU, nbtocomp=0;// tcost total min cost 
+        int bdCost=NU,tr=NU;
+  
+
+        // "N" malware installation is considered in the  MinCostMalware function    
+ 
+	    if (NbInputs &lt;=0) return NU;
+
+        for(i : int[0,diMr-1] ) rolOk[i]=true;
+        for(i : int[0,diM-1] ) rolOk[node.in[i].roleId]=false;
+
+
+
+        // for all "no system" inputs: we memorise potentiel B et M available attacker nodes and costs of non acceptable data submissions or (for M only) session destruction, this cost 0 for peer position and session breaking for others
+
+
+	 	for(i : int[0,diM-1] ) if ( reachable(i) and (node.RoleParams[node.in[i].roleId][1]!=NU) and (node.RoleParams[node.in[i].roleId][0]!=rS) ) { // reachable  and important  
+           int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat;
+           int[0,diMr-1] role = node.in[i].roleId; 
+           int[NU,2] attack_position=node.in[i].attack_position;
+           int sessDestruct=NU;
+
+           if ( (attackerState==sF) and (attack_position==peer) ) rolOk[role]=true;
+
+           if (rolCostBdM[role]!=0) {
+                    sessDestruct=ProtDestructCost(i,role,node.in[i].node_id,attack_position,attackerState);
+                    if (sessDestruct != NU) { if (rolCostBdM[role] == NU) rolCostBdM[role]=sessDestruct; else if (sessDestruct &lt; rolCostBdM[role]) rolCostBdM[role]=sessDestruct; }
+           }
+
+	 	}
+
+        // min cost of mandatory roles compromissions and count of compromisable OK roles
+        for(role : int[0,diMr-1] ) if ( node.RoleParams[role][0]!=rS and node.RoleParams[role][1]!=NU ) { //no system and no tranparent roles
+            if ( node.RoleParams[role][1]==1 ) { // mandatory role  
+                if (not rolOk[role] ) return 0; // peer Position  not available or in non F state
+                if (rolCostBdM[role]!=NU) {
+                    if ( (tcost==NU) or (rolCostBdM[role]&lt;tcost) ) tcost=rolCostBdM[role]; // minimal cost of  the compromissions of the mandatory role =&gt; tcost 
+                }            
+            } else if (node.RoleParams[role][1]==0) if (rolOk[role]) nbOKnMand++;          
+        }
+
+        if ( nbOKnMand &lt; node.actThreshold ) return 0; // not enough of non mandatory roles are active
+
+        nbtocomp=1+nbOKnMand-node.actThreshold; // number of opeional role necessary to compromise
+
+        // minimal cost of the non mandatory roles' compromission
+        for(k : int[0,diMr-1] ) {
+          int tr1=NU, j=NU;
+          //choice of a role with the minimal cost 
+          for(role : int[0,diMr-1] ) if ( (node.RoleParams[role][0]!=rS) and (node.RoleParams[role][1]==0) and (rolCostBdM[role] != NU) and (tr&lt;nbtocomp) )  { //only non mandatory roles
+            if ( (tr1==NU) or (tr1&gt;rolCostBdM[role]) )  { tr1=rolCostBdM[role]; j=role; } // role of min cost
+          }
+          if (tr1!=NU) { tr++; bdCost = (bdCost!=NU)?bdCost:0 + tr1; rolCostBdM[j]=NU; }
+        }     
+        if (tr &lt; nbtocomp) return tcost; // impossible to comproomise enough of no mandatory roles
+        if (tcost==NU) return bdCost;    // it was impossible to compromise mandatory roles  
+        return bdCost&gt;tcost?tcost:bdCost; // choice between costs of mandatory or non mandatory role compromissions 
+    }
+
+
+
+	int NoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {  // true if essential producers present on peer position or if necessary min of comm destruction by malwares!!!!
+        int NoProducerDispCost, suppl=0;
+        if (fallback and  not isFallBackActiv(node_id,sN) ) return NU;
+        if ( (not fallback) and  isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        NoProducerDispCost=minNonDispCost();
+        if (NoProducerDispCost == NU) return NU;
+        NoProducerDispCost+=suppl;
+        if ( (NoProducerDispCost+costs)&lt;= maxCosts ) return NoProducerDispCost;
+        return NU;
+	}
+	
+    void updateNoProducerDisp(int[NU,nbNodes-1] node_id, bool fallback) {
+        int suppl=0;
+        int NoProducerDispCost=minNonDispCost();
+        if ( (not fallback) and isFallBackActiv(node_id,sN) ) suppl=node.AnomDetParam[sN-1];
+        costs += NoProducerDispCost+suppl;
+        if (not fallback) nodeState[node_id].locat=sN;
+    }
+
+
+	int[NU,MaxUnitCost] MinCostMalware(int[NU,nbNodes-1] node_id,int[0,NbStates-1] target_state, bool fallback) {  // malware on input or bad data et peer (partner) position  
+	    int cost=NU,tcost=NU, suppl=0;
+        if ((node.node_type==cK) and (target_state==sB)) return NU;
+        if (fallback and not isFallBackActiv(node_id,target_state) ) return NU;
+        if ( (not fallback) and isFallBackActiv(node_id,target_state)) suppl=node.AnomDetParam[target_state-1];
+	    if (NbInputs &lt;=0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if ( (nodeState[node.in[i].node_id].locat==sM) or ( (nodeState[node.in[i].node_id].locat==sB) and (node.in[i].attack_position==peer) )) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState);
+
+            if (tcost&gt;NU and node.RoleParams[role][2+target_state]&gt;NU) tcost+=node.RoleParams[role][2+target_state]; else tcost=NU;  // 3 cost for full malware, 4 malware BD only, 5 malware N only
+
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost =tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+        cost+=suppl;
+	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void updateMalware(int[NU,nbNodes-1] node_id, int[0,NbStates-1] target_state, bool fallback) {
+	    int[NU,MaxUnitCost] tmp=MinCostMalware(node_id,target_state, fallback);
+	    if (tmp &gt;0) costs=costs+tmp;
+	    if (not fallback) nodeState[node_id].locat=target_state;
+	}
+	
+
+	int[NU,MaxUnitCost] RemoteSecrCost(int[NU,nbNodes-1] node_id) {  // malware on inputs try to steal all locally stored secrets 
+	    int cost=NU,tcost=NU,z=0;
+	    if (NbInputs &lt;=0) return NU;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) z++;
+        if (z==0) return NU;
+	 	for(i : int[0,diM-1] ) if (reachable(i)) if (nodeState[node.in[i].node_id].locat==sM) {
+            int[0,diMr-1] role = node.in[i].roleId;
+            int[NU,2] attack_position=node.in[i].attack_position;
+            int[0,NbStates-1] attackerState=nodeState[node.in[i].node_id].locat; 
+            tcost=ProtProtectCost(i,role,node.in[i].node_id,attack_position,attackerState); //protocol access cost
+            if (tcost&gt;NU and node.RoleParams[role][6]&gt;NU) tcost+=node.RoleParams[role][6];else tcost=NU;
+            if (tcost&gt;NU) if ( (cost==NU) or (tcost&lt;cost) ) cost=tcost; 
+		}
+        if (cost&lt;=NU) return NU;
+ 	    if ( (cost+costs)&lt;= maxCosts )	return cost; else return NU;
+
+	}
+
+
+	void setRemoteSecr(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] tmp=RemoteSecrCost(node_id);
+	    if (tmp &gt;0) costs=costs+tmp;
+        for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true;
+	}
+
+	
+	int[NU,maxCosts] LocalVarCost(int[NU,nbNodes-1] node_id) {
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) {
+	        if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) {
+	            cost=node.secrTheftCost;
+	            if ((cost+costs)&lt;=maxCosts) return cost;
+                return NU;
+	        }
+	    };
+	    return NU;
+	}
+	
+	void setLocalSecr(int[NU,nbNodes-1] node_id){
+	    int[NU,MaxUnitCost] cost;
+	    for(i : int[0,nbVar-1] ) if ((!StolenSecrets[i]) and StoredSecrets[node.node_id][i] ) StolenSecrets[i]=true; 
+	    cost=node.secrTheftCost;
+	    costs=costs+cost;
+        return;
+	}
+
+    int MinFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) return bd;
+        if (bd&lt;0) return mal;
+        if (bd&gt;mal) return mal;
+        return bd;
+    }
+    void UpdateFB(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sB,fallback), bd=BadData(node_id,fallback);
+        if (mal&lt;0) {updateBadData(node_id,fallback);return;};
+        if (bd&lt;0) {updateMalware(node_id,sB,fallback);return;};
+        if (bd&gt;mal) {updateMalware(node_id,sB,fallback);return;};
+        updateBadData(node_id,fallback);return;
+    }
+
+    int MinFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) return noProd;
+        if (noProd&lt;0) return mal;
+        if (noProd&gt;mal) return mal;
+        return noProd;
+    }
+    void UpdateFN(int[NU,nbNodes-1] node_id, bool fallback) {
+        int mal=MinCostMalware(node_id,sN,fallback), noProd=NoProducerDisp(node_id,fallback);
+        if (mal&lt;0) {updateNoProducerDisp(node_id,fallback);return;};
+        if (noProd&lt;0) {updateMalware(node_id,sN,fallback);return;};
+        if (noProd&gt;mal) {updateMalware(node_id,sN,fallback);return;};
+        updateNoProducerDisp(node_id,fallback);return;
+    }
+
+
+    int MinFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        return MinCostMalware(node_id,sM,fallback);
+    }
+    void UpdateFM(int[NU,nbNodes-1] node_id, bool fallback) {
+        updateMalware(node_id,sM,fallback);return;
+    }
+		
+</declaration>
+		<location id="id140" x="-24157" y="-11296" color="#00ff00">
+			<name x="-24131" y="-11313">F</name>
+		</location>
+		<location id="id141" x="-24336" y="-11458" color="#ffa500">
+			<name x="-24344" y="-11441">N</name>
+		</location>
+		<location id="id142" x="-24335" y="-11220" color="#ffa500">
+			<name x="-24343" y="-11254">M</name>
+		</location>
+		<location id="id143" x="-24335" y="-11330" color="#ffa500">
+			<name x="-24335" y="-11364">B</name>
+		</location>
+		<location id="id144" x="-23808" y="-11381">
+			<name x="-23791" y="-11389">Start</name>
+		</location>
+		<location id="id145" x="-23834" y="-11143">
+			<name x="-23808" y="-11151">R</name>
+			<committed/>
+		</location>
+		<init ref="id144"/>
+		<transition id="id146">
+			<source ref="id143"/>
+			<target ref="id143"/>
+			<label kind="guard" x="-24599" y="-11509">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24573" y="-11483">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-24599" y="-11398"/>
+			<nail x="-24599" y="-11483"/>
+			<nail x="-24361" y="-11483"/>
+		</transition>
+		<transition id="id147">
+			<source ref="id143"/>
+			<target ref="id145"/>
+			<label kind="guard" x="-24140" y="-11066">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24140" y="-11049">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-24531" y="-11356"/>
+			<nail x="-24531" y="-11024"/>
+			<nail x="-23774" y="-11032"/>
+		</transition>
+		<transition id="id148">
+			<source ref="id143"/>
+			<target ref="id141"/>
+			<label kind="guard" x="-24480" y="-11406">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24480" y="-11389">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24429" y="-11398"/>
+		</transition>
+		<transition id="id149">
+			<source ref="id143"/>
+			<target ref="id145"/>
+			<label kind="guard" x="-24454" y="-11109">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24454" y="-11092">stepNb++,UpdateFM(id,true),FallBack(id,sM)</label>
+			<nail x="-24480" y="-11330"/>
+			<nail x="-24480" y="-11067"/>
+			<nail x="-23834" y="-11075"/>
+		</transition>
+		<transition id="id150">
+			<source ref="id143"/>
+			<target ref="id142"/>
+			<label kind="guard" x="-24471" y="-11304">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24471" y="-11287">stepNb++,UpdateFM(id,false)</label>
+			<nail x="-24378" y="-11279"/>
+		</transition>
+		<transition id="id151" color="#c0c0c0">
+			<source ref="id142"/>
+			<target ref="id144"/>
+			<label kind="synchronisation" x="-23808" y="-11219">reset?</label>
+			<nail x="-24395" y="-11219"/>
+			<nail x="-24395" y="-11117"/>
+			<nail x="-23757" y="-11118"/>
+		</transition>
+		<transition id="id152" color="#c0c0c0">
+			<source ref="id143"/>
+			<target ref="id144"/>
+			<label kind="synchronisation" x="-24225" y="-11381">reset?</label>
+			<nail x="-24293" y="-11364"/>
+		</transition>
+		<transition id="id153" color="#c0c0c0">
+			<source ref="id140"/>
+			<target ref="id144"/>
+			<label kind="synchronisation" x="-23791" y="-11330">reset?</label>
+			<nail x="-23766" y="-11304"/>
+		</transition>
+		<transition id="id154" color="#c0c0c0">
+			<source ref="id141"/>
+			<target ref="id144"/>
+			<label kind="synchronisation" x="-24216" y="-11517">reset?</label>
+			<nail x="-24259" y="-11492"/>
+			<nail x="-23808" y="-11500"/>
+		</transition>
+		<transition id="id155">
+			<source ref="id140"/>
+			<target ref="id140"/>
+			<label kind="guard" x="-24080" y="-11491">stepNb&lt;maxSteps &amp; RemoteSecrCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24072" y="-11474">stepNb++,setRemoteSecr(id)</label>
+			<nail x="-23885" y="-11475"/>
+			<nail x="-24063" y="-11475"/>
+		</transition>
+		<transition id="id156">
+			<source ref="id140"/>
+			<target ref="id145"/>
+			<label kind="guard" x="-24089" y="-11304">stepNb&lt;maxSteps &amp; MinFN(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24089" y="-11287">stepNb++,UpdateFN(id,true), FallBack(id,sN)</label>
+			<nail x="-23953" y="-11279"/>
+		</transition>
+		<transition id="id157">
+			<source ref="id140"/>
+			<target ref="id145"/>
+			<label kind="guard" x="-24242" y="-11160">stepNb&lt;maxSteps &amp; MinFM(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24242" y="-11143">stepNb++,UpdateFM(id,true), FallBack(id,sM)</label>
+			<nail x="-24157" y="-11135"/>
+		</transition>
+		<transition id="id158" color="#c0c0c0">
+			<source ref="id145"/>
+			<target ref="id144"/>
+			<label kind="synchronisation" x="-23851" y="-11186">reset!</label>
+		</transition>
+		<transition id="id159">
+			<source ref="id140"/>
+			<target ref="id145"/>
+			<label kind="guard" x="-24208" y="-11228">stepNb&lt;maxSteps &amp; MinFB(id,true)&gt;=0</label>
+			<label kind="assignment" x="-24208" y="-11211">stepNb++,UpdateFB(id,true), FallBack(id,sB)</label>
+			<nail x="-24038" y="-11177"/>
+		</transition>
+		<transition id="id160" color="#c0c0c0">
+			<source ref="id144"/>
+			<target ref="id143"/>
+			<label kind="guard" x="-24106" y="-11407">nodeState[id].locat==sB</label>
+			<label kind="synchronisation" x="-24106" y="-11390">startCh?</label>
+			<nail x="-23902" y="-11398"/>
+		</transition>
+		<transition id="id161" color="#a9a9a9">
+			<source ref="id144"/>
+			<target ref="id140"/>
+			<label kind="guard" x="-24089" y="-11373">nodeState[id].locat==sF</label>
+			<label kind="synchronisation" x="-24089" y="-11356">startCh?</label>
+			<nail x="-24106" y="-11347"/>
+		</transition>
+		<transition id="id162" color="#c0c0c0">
+			<source ref="id144"/>
+			<target ref="id141"/>
+			<label kind="guard" x="-24012" y="-11432">nodeState[id].locat==sN</label>
+			<label kind="synchronisation" x="-23885" y="-11415">startCh?</label>
+			<nail x="-23876" y="-11415"/>
+		</transition>
+		<transition id="id163" color="#c0c0c0">
+			<source ref="id144"/>
+			<target ref="id142"/>
+			<label kind="guard" x="-24072" y="-11330">nodeState[id].locat==sM</label>
+			<label kind="synchronisation" x="-23953" y="-11347">startCh?</label>
+			<nail x="-23902" y="-11347"/>
+		</transition>
+		<transition id="id164">
+			<source ref="id142"/>
+			<target ref="id142"/>
+			<label kind="guard" x="-24403" y="-11194">stepNb&lt;maxSteps &amp; LocalVarCost(id)&gt;=0</label>
+			<label kind="assignment" x="-24403" y="-11177">stepNb++,setLocalSecr(id)</label>
+			<nail x="-24310" y="-11160"/>
+			<nail x="-24233" y="-11202"/>
+		</transition>
+		<transition id="id165">
+			<source ref="id140"/>
+			<target ref="id143"/>
+			<label kind="guard" x="-24311" y="-11339">stepNb&lt;maxSteps &amp; MinFB(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24311" y="-11322">stepNb++,UpdateFB(id,false)</label>
+		</transition>
+		<transition id="id166">
+			<source ref="id140"/>
+			<target ref="id141"/>
+			<label kind="guard" x="-24310" y="-11449">stepNb&lt;maxSteps &amp; MinFN(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24310" y="-11432">stepNb++,UpdateFN(id,false)</label>
+			<nail x="-24157" y="-11458"/>
+		</transition>
+		<transition id="id167">
+			<source ref="id140"/>
+			<target ref="id142"/>
+			<label kind="guard" x="-24327" y="-11270">stepNb&lt;maxSteps &amp; MinFM(id,false)&gt;=0</label>
+			<label kind="assignment" x="-24327" y="-11253">stepNb++,UpdateFM(id,false)</label>
+		</transition>
+	</template>
+	<template>
+		<name>Start</name>
+		<location id="id168" x="-76" y="-68">
+			<name x="-86" y="-102">Running</name>
+		</location>
+		<location id="id169" x="-306" y="-93">
+			<name x="-316" y="-127">Start</name>
+		</location>
+		<init ref="id169"/>
+		<transition id="id170">
+			<source ref="id168"/>
+			<target ref="id169"/>
+			<label kind="guard" x="-177" y="-140">true</label>
+			<label kind="synchronisation" x="-177" y="-123">reset?</label>
+			<nail x="-187" y="-136"/>
+		</transition>
+		<transition id="id171">
+			<source ref="id169"/>
+			<target ref="id168"/>
+			<label kind="guard" x="-179" y="-98">true</label>
+			<label kind="synchronisation" x="-212" y="-85">startCh!</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+
+Browser=Browsert(0);Hacker=Hackert(1);HttpSrv=HttpSrvt(2);Linux=Linuxt(3);Routing=Routingt(4);Windows=Windowst(5); // all processeses
+Go=Start();
+
+// List one or more processes to be composed into a system.
+system   Browser,Hacker,HttpSrv,Linux,Routing,Windows&lt;Go;  // the Go process has a higher priority</system>
+	<queries>
+		<query>
+			<formula>E&lt;&gt; ( IoTFront.B )</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (StolenSecrets[4]==true)</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>inf{IoTFront.B}: costs </formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>inf{StolenSecrets[4]==true}: costs</formula>
+			<comment/>
+		</query>
+	</queries>
+</nta>

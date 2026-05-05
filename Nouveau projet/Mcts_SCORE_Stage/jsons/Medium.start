@@ -1,0 +1,20 @@
+{
+    "init":{
+        "states": [
+            {
+                "softComp": "ExtHack",
+                "location": "MALW"
+            }
+         ],
+        "secrets": [
+        ]
+    },
+    "final":{
+        "states": [
+            {
+                "softComp": "ExBrowser",
+                "location": "BADD"
+            }
+         ]
+    }
+ }

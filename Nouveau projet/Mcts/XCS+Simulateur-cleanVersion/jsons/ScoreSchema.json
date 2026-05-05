@@ -1,0 +1,201 @@
+{
+  "type" : "object",
+  "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:JsScoreRoot",
+  "properties" : {
+    "nbNodes" : {
+      "type" : "integer"
+    },
+    "nbSecrets" : {
+      "type" : "integer"
+    },
+    "secrets" : {
+      "type" : "array",
+      "items" : {
+        "type" : "string"
+      }
+    },
+    "nodes" : {
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:JsNode",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "softwareClass" : {
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "kernelIndex" : {
+            "type" : "integer"
+          },
+          "nbRoles" : {
+            "type" : "integer"
+          },
+          "nbInputs" : {
+            "type" : "integer"
+          },
+          "nodeType" : {
+            "type" : "string"
+          },
+          "plausThreshold" : {
+            "type" : "integer"
+          },
+          "actThreshold" : {
+            "type" : "integer"
+          },
+          "secrTheftCost" : {
+            "type" : "integer"
+          },
+          "secrStore" : {
+            "type" : "array",
+            "items" : {
+              "type" : "boolean"
+            }
+          },
+          "monBypassCost" : {
+            "type" : "object",
+            "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:JsMonBypassCosts",
+            "properties" : {
+              "toM" : {
+                "type" : "integer"
+              },
+              "toB" : {
+                "type" : "integer"
+              },
+              "toN" : {
+                "type" : "integer"
+              }
+            }
+          },
+          "roles" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:JsRole",
+              "properties" : {
+                "name" : {
+                  "type" : "string"
+                },
+                "protocol" : {
+                  "type" : "string"
+                },
+                "type" : {
+                  "type" : "string"
+                },
+                "categ" : {
+                  "type" : "string"
+                },
+                "dataBreakCost" : {
+                  "type" : "integer"
+                },
+                "mCodeInjectCost" : {
+                  "type" : "integer"
+                },
+                "bCodeInjectCost" : {
+                  "type" : "integer"
+                },
+                "nCodeInjectCost" : {
+                  "type" : "integer"
+                },
+                "remoteSecrTheftCost" : {
+                  "type" : "integer"
+                },
+                "sessionProtectSecretIndex" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "inputs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:JsInput",
+              "properties" : {
+                "sourceNodeIndex" : {
+                  "type" : "integer"
+                },
+                "debug_sourceNodeName" : {
+                  "type" : "string"
+                },
+                "position" : {
+                  "type" : "string"
+                },
+                "roleIndex" : {
+                  "type" : "integer"
+                },
+                "protBreakCosts" : {
+                  "type" : "object",
+                  "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:JsProtBreakCosts",
+                  "properties" : {
+                    "destruct" : {
+                      "type" : "integer"
+                    },
+                    "theft" : {
+                      "type" : "integer"
+                    },
+                    "tunnelProtocol" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "string"
+                      }
+                    },
+                    "tunnelDecrypt" : {
+                      "type" : "integer"
+                    },
+                    "tunnelDestroy" : {
+                      "type" : "integer"
+                    }
+                  }
+                },
+                "isOpen" : {
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "fallbackActionIndex" : {
+            "type" : "object",
+            "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:JsFallbackActionIndex",
+            "properties" : {
+              "toM" : {
+                "type" : "integer"
+              },
+              "toB" : {
+                "type" : "integer"
+              },
+              "toN" : {
+                "type" : "integer"
+              }
+            }
+          },
+          "debug_fallbackActionNames" : {
+            "type" : "string"
+          }
+        }
+      }
+    },
+    "fallbackActions" : {
+      "type" : "array",
+      "items" : {
+        "type" : "object",
+        "id" : "urn:jsonschema:fr:systemx:cti:ra:graph:export:format:score:verbatim:VerbatimBeanFallback",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}

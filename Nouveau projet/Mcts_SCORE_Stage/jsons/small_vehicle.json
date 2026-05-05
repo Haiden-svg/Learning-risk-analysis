@@ -1,0 +1,239 @@
+{
+  "nbNodes": 6,
+  "nbSecrets": 1,
+  "secrets": ["updateKey"],
+  "fallbackActions": [],
+  "nodes": [
+    {
+      "name": "IntHacker",
+      "softwareClass": "kernel",
+      "text": "Internet attacker entry point",
+      "kernelIndex": null,
+      "nbRoles": 1,
+      "nbInputs": 0,
+      "nodeType": "kernel",
+      "plausThreshold": null,
+      "actThreshold": null,
+      "secrTheftCost": null,
+      "secrStore": [false],
+      "monBypassCost": {"toM": null, "toB": null, "toN": null},
+      "fallbackActionIndex": {"toM": null, "toB": null, "toN": null},
+      "debug_fallbackActionNames": null,
+      "roles": [
+        {
+          "name": "hacker_role",
+          "protocol": null,
+          "type": "kernel-network",
+          "categ": "transp",
+          "dataBreakCost": null,
+          "mCodeInjectCost": null,
+          "bCodeInjectCost": null,
+          "nCodeInjectCost": null,
+          "remoteSecrTheftCost": null,
+          "sessionProtectSecretIndex": [false]
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "name": "DuProxy",
+      "softwareClass": "root",
+      "text": "Diagnostic/Update Proxy - entry via Internet",
+      "kernelIndex": null,
+      "nbRoles": 1,
+      "nbInputs": 1,
+      "nodeType": "process",
+      "plausThreshold": 1,
+      "actThreshold": 1,
+      "secrTheftCost": null,
+      "secrStore": [false],
+      "monBypassCost": {"toM": null, "toB": null, "toN": null},
+      "fallbackActionIndex": {"toM": null, "toB": null, "toN": null},
+      "debug_fallbackActionNames": null,
+      "roles": [
+        {
+          "name": "server",
+          "protocol": "HTTPS",
+          "type": "functional",
+          "categ": "man",
+          "dataBreakCost": 30,
+          "mCodeInjectCost": null,
+          "bCodeInjectCost": 50,
+          "nCodeInjectCost": null,
+          "remoteSecrTheftCost": null,
+          "sessionProtectSecretIndex": [false]
+        }
+      ],
+      "inputs": [
+        {
+          "sourceNodeIndex": 0,
+          "debug_sourceNodeName": "IntHacker",
+          "position": "peer",
+          "roleIndex": 0,
+          "protBreakCosts": {"destruct": null, "theft": null, "tunnelProtocol": null, "tunnelDecrypt": null, "tunnelDestroy": null},
+          "isOpen": "#true"
+        }
+      ]
+    },
+    {
+      "name": "VehMonit",
+      "softwareClass": "root",
+      "text": "Vehicle Monitor - receives updates from DuProxy",
+      "kernelIndex": null,
+      "nbRoles": 1,
+      "nbInputs": 1,
+      "nodeType": "process",
+      "plausThreshold": 1,
+      "actThreshold": 1,
+      "secrTheftCost": null,
+      "secrStore": [false],
+      "monBypassCost": {"toM": null, "toB": null, "toN": null},
+      "fallbackActionIndex": {"toM": null, "toB": null, "toN": null},
+      "debug_fallbackActionNames": null,
+      "roles": [
+        {
+          "name": "client",
+          "protocol": "HTTPS",
+          "type": "functional",
+          "categ": "man",
+          "dataBreakCost": 20,
+          "mCodeInjectCost": null,
+          "bCodeInjectCost": null,
+          "nCodeInjectCost": null,
+          "remoteSecrTheftCost": null,
+          "sessionProtectSecretIndex": [false]
+        }
+      ],
+      "inputs": [
+        {
+          "sourceNodeIndex": 1,
+          "debug_sourceNodeName": "DuProxy",
+          "position": "peer",
+          "roleIndex": 0,
+          "protBreakCosts": {"destruct": null, "theft": null, "tunnelProtocol": null, "tunnelDecrypt": null, "tunnelDestroy": null},
+          "isOpen": "DuProxy <> $N"
+        }
+      ]
+    },
+    {
+      "name": "BodyDu",
+      "softwareClass": "user",
+      "text": "Body Domain Update handler",
+      "kernelIndex": null,
+      "nbRoles": 1,
+      "nbInputs": 1,
+      "nodeType": "process",
+      "plausThreshold": 1,
+      "actThreshold": 1,
+      "secrTheftCost": null,
+      "secrStore": [false],
+      "monBypassCost": {"toM": null, "toB": null, "toN": null},
+      "fallbackActionIndex": {"toM": null, "toB": null, "toN": null},
+      "debug_fallbackActionNames": null,
+      "roles": [
+        {
+          "name": "client",
+          "protocol": "CAN",
+          "type": "functional",
+          "categ": "man",
+          "dataBreakCost": 5,
+          "mCodeInjectCost": null,
+          "bCodeInjectCost": null,
+          "nCodeInjectCost": null,
+          "remoteSecrTheftCost": null,
+          "sessionProtectSecretIndex": [false]
+        }
+      ],
+      "inputs": [
+        {
+          "sourceNodeIndex": 2,
+          "debug_sourceNodeName": "VehMonit",
+          "position": "peer",
+          "roleIndex": 0,
+          "protBreakCosts": {"destruct": null, "theft": null, "tunnelProtocol": null, "tunnelDecrypt": null, "tunnelDestroy": null},
+          "isOpen": "VehMonit <> $N"
+        }
+      ]
+    },
+    {
+      "name": "BodyMngt",
+      "softwareClass": "root",
+      "text": "Body Management - controls vehicle access and start",
+      "kernelIndex": null,
+      "nbRoles": 1,
+      "nbInputs": 1,
+      "nodeType": "process",
+      "plausThreshold": 1,
+      "actThreshold": 1,
+      "secrTheftCost": null,
+      "secrStore": [false],
+      "monBypassCost": {"toM": null, "toB": null, "toN": null},
+      "fallbackActionIndex": {"toM": null, "toB": null, "toN": null},
+      "debug_fallbackActionNames": null,
+      "roles": [
+        {
+          "name": "server",
+          "protocol": "CAN",
+          "type": "functional",
+          "categ": "man",
+          "dataBreakCost": 20,
+          "mCodeInjectCost": null,
+          "bCodeInjectCost": null,
+          "nCodeInjectCost": null,
+          "remoteSecrTheftCost": null,
+          "sessionProtectSecretIndex": [false]
+        }
+      ],
+      "inputs": [
+        {
+          "sourceNodeIndex": 3,
+          "debug_sourceNodeName": "BodyDu",
+          "position": "peer",
+          "roleIndex": 0,
+          "protBreakCosts": {"destruct": null, "theft": null, "tunnelProtocol": null, "tunnelDecrypt": null, "tunnelDestroy": null},
+          "isOpen": "BodyDu <> $N"
+        }
+      ]
+    },
+    {
+      "name": "DoorLock",
+      "softwareClass": "user",
+      "text": "Door Lock controller - final target",
+      "kernelIndex": null,
+      "nbRoles": 1,
+      "nbInputs": 1,
+      "nodeType": "process",
+      "plausThreshold": 1,
+      "actThreshold": 1,
+      "secrTheftCost": null,
+      "secrStore": [false],
+      "monBypassCost": {"toM": null, "toB": null, "toN": null},
+      "fallbackActionIndex": {"toM": null, "toB": null, "toN": null},
+      "debug_fallbackActionNames": null,
+      "roles": [
+        {
+          "name": "server",
+          "protocol": "CAN",
+          "type": "functional",
+          "categ": "man",
+          "dataBreakCost": 5,
+          "mCodeInjectCost": null,
+          "bCodeInjectCost": null,
+          "nCodeInjectCost": null,
+          "remoteSecrTheftCost": null,
+          "sessionProtectSecretIndex": [false]
+        }
+      ],
+      "inputs": [
+        {
+          "sourceNodeIndex": 4,
+          "debug_sourceNodeName": "BodyMngt",
+          "position": "peer",
+          "roleIndex": 0,
+          "protBreakCosts": {"destruct": null, "theft": null, "tunnelProtocol": null, "tunnelDecrypt": null, "tunnelDestroy": null},
+          "isOpen": "BodyMngt <> $N"
+        }
+      ]
+    }
+  ]
+}
